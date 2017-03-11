@@ -27,6 +27,7 @@ GLFWwindow *window; // Main application window
 string RESOURCE_DIR = ""; // Where the resources are loaded from
 shared_ptr<Program> prog, tex_prog;
 shared_ptr<Shape> shape;
+shared_ptr<Shape> cube;
 
 int g_width = 512;
 int g_height = 512;
@@ -114,6 +115,11 @@ static void initGL()
 	shape->loadMesh(RESOURCE_DIR + "penguinsphere.obj");
 	shape->resize();
 	shape->init();
+
+	cube = make_shared<Shape>();
+	cube->loadMesh(RESOURCE_DIR + "cube.obj");
+	cube->resize();
+	cube->init();
 
 	//Initialize the geometry to render a quad to the screen
 	initQuad();
@@ -246,7 +252,7 @@ static void render()
 
 			/* Left Arm */
 			MV->pushMatrix();
-				MV->translate(vec3(-1, -.45, .25));
+				MV->translate(vec3(-1, -.45, .2));
 				MV->rotate(-.1, vec3(0, 0, 1));
 				MV->scale(vec3(.18, .9, .5));
 			  	SetMaterial(1);
@@ -256,12 +262,32 @@ static void render()
 
 			/* Right Arm */
 			MV->pushMatrix();
-				MV->translate(vec3(1, -.45, .25));
+				MV->translate(vec3(1, -.45, .2));
 				MV->rotate(.1, vec3(0, 0, 1));
 				MV->scale(vec3(.18, .9, .5));
 			  	SetMaterial(1);
 		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
 		  	  	shape->draw(prog);
+			MV->popMatrix();
+
+			/* Left Foot */
+			MV->pushMatrix();
+				MV->translate(vec3(-.35, -1.4, .05));
+				MV->rotate(-.15, vec3(0, 1, 0));
+				MV->scale(vec3(.25, .10, .49));
+			  	SetMaterial(2);
+		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	cube->draw(prog);
+			MV->popMatrix();
+
+			/* Right Foot */
+			MV->pushMatrix();
+				MV->translate(vec3(.35, -1.4, .05));
+				MV->rotate(.15, vec3(0, 1, 0));
+				MV->scale(vec3(.25, .10, .49));
+			  	SetMaterial(2);
+		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	cube->draw(prog);
 			MV->popMatrix();
 
 			/* Body */
