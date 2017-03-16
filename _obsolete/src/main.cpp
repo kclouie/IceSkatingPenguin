@@ -1,5 +1,5 @@
 /* 
-Final Project 
+Final Project - Lab 8? base
 
 Winter 2017 - ZJW (Piddington texture write)
 Look for "TODO" in this file and write new shaders
@@ -31,13 +31,18 @@ string RESOURCE_DIR = ""; // Where the resources are loaded from
 shared_ptr<Program> prog, tex_prog;
 shared_ptr<Shape> shape;
 shared_ptr<Shape> cube;
+shared_ptr<Shape> bunny;
 
 int g_width = 512;
 int g_height = 512;
 float sTheta;
 int gMat = 1;
 int FirstTime = 1;
-float Lx = 1, Ly = 1, Lz = 1;
+float Lx = 50, Ly = 50, Lz = 30;
+
+double oldx, oldy;
+double phi, theta;
+vec3 eye, LA, up;
 
 double xMove, lWing, rWing;
 
@@ -118,6 +123,14 @@ static void initGL()
   	int width, height;
   	glfwGetFramebufferSize(window, &width, &height);
 
+  	oldx = 0;
+	oldy = 0;
+	phi = 0;
+	theta = 0;
+	LA = vec3(5, 0, 0);
+	eye = vec3(0, 0, 0);
+	up = vec3(0, 1, 0);
+
 	sTheta = 0;
 	pTheta = 0;
 	rfTheta = 0;
@@ -144,6 +157,11 @@ static void initGL()
 	cube->resize();
 	cube->init();
 
+	bunny = make_shared<Shape>();
+	bunny->loadMesh(RESOURCE_DIR + "bunny.obj");
+	bunny->resize();
+	bunny->init();
+
 	//Initialize the geometry to render a quad to the screen
 	initQuad();
 
@@ -153,7 +171,8 @@ static void initGL()
 	prog->setShaderNames(RESOURCE_DIR + "simple_vert.glsl", RESOURCE_DIR + "simple_frag.glsl");
 	prog->init();
 	prog->addUniform("P");
-	prog->addUniform("MV");
+	prog->addUniform("M");
+	prog->addUniform("V");
 	prog->addUniform("LPos");
 	prog->addUniform("MatAmb");
 	prog->addUniform("MatDif");
@@ -229,7 +248,7 @@ static void render()
 
    	// Create the matrix stacks - please leave these alone for now
    	auto P = make_shared<MatrixStack>();
-   	auto MV = make_shared<MatrixStack>();
+   	auto M = make_shared<MatrixStack>();
    	// Apply perspective projection.
    	P->pushMatrix();
    	P->perspective(45.0f, aspect, 0.01f, 100.0f);
@@ -239,99 +258,121 @@ static void render()
 	glUniform3f(prog->getUniform("LPos"), Lx, Ly, Lz);
 	glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(P->topMatrix()));
 
+	LA = vec3((cos(glm::radians(phi)) * cos(glm::radians(theta))),
+		  (sin(glm::radians(phi))),
+		  (cos(glm::radians(phi)) * cos((3.14159265359 / 2) - glm::radians(theta))));
+
+	glm::mat4 V = lookAt(eye, eye + LA, up);
+	glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE,value_ptr(V));
+
 	//globl transforms for 'camera'
-   	MV->pushMatrix();
-    	MV->loadIdentity();
-	 	MV->translate(vec3(xMove, pHeight, -15));
-	 	MV->rotate(radians(pTheta), vec3(0, 1, 0));
+	M->pushMatrix();
+		M->translate(vec3(0, 0, -5));
+		SetMaterial(0);
+  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+  	  	bunny->draw(prog);
+	M->popMatrix();
+
+	M->pushMatrix();
+		M->translate(vec3(5, 0, 0));
+		SetMaterial(1);
+  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+  	  	bunny->draw(prog);
+	M->popMatrix();
+
+   	M->pushMatrix();
+    	M->loadIdentity();
+	 	/*M->translate(vec3(xMove, pHeight, -15));*/
+	 	M->translate(vec3(LA.x + xMove, LA.y + pHeight, LA.z));
+	 	M->rotate(radians(pTheta), vec3(0, 1, 0));
 	  	/* Body */	
-		MV->pushMatrix();
+		M->pushMatrix();
   			/* Left Eye */
-			MV->pushMatrix();
-				MV->translate(vec3(-.2, .3, .85));
-				MV->scale(vec3(.1, .1, .1));
+			M->pushMatrix();
+				M->translate(vec3(-.2, .3, .85));
+				M->scale(vec3(.1, .1, .1));
 			  	SetMaterial(1);
-		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
 		  	  	shape->draw(prog);
-			MV->popMatrix();
+			M->popMatrix();
 
 			/* Right Eye */
-			MV->pushMatrix();
-				MV->translate(vec3(.2, .3, .85));
-				MV->scale(vec3(.1, .1, .1));
+			M->pushMatrix();
+				M->translate(vec3(.2, .3, .85));
+				M->scale(vec3(.1, .1, .1));
 			  	SetMaterial(1);
-		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
 		  	  	shape->draw(prog);
-			MV->popMatrix();
+			M->popMatrix();
 
 			/* Nose */
-			MV->pushMatrix();
-				MV->translate(vec3(0, .1, .5));
-				MV->scale(vec3(.1, .1, .75));
+			M->pushMatrix();
+				M->translate(vec3(0, .1, .5));
+				M->scale(vec3(.1, .1, .75));
 			  	SetMaterial(2);
-		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
 		  	  	shape->draw(prog);
-			MV->popMatrix();
+			M->popMatrix();
 
 			/* Left Wing */
-			MV->pushMatrix();
-				MV->translate(vec3(-.9, .2, 0));
-				MV->rotate(lWing, vec3(0, 0, 1));
-				MV->translate(vec3(0, -.7, 0));
-				MV->scale(vec3(.18, .9, .5));
+			M->pushMatrix();
+				M->translate(vec3(-.9, .2, 0));
+				M->rotate(lWing, vec3(0, 0, 1));
+				M->translate(vec3(0, -.7, 0));
+				M->scale(vec3(.18, .9, .5));
 			  	SetMaterial(1);
-		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
 		  	  	shape->draw(prog);
-			MV->popMatrix();
+			M->popMatrix();
 
 			/* Right Wing */
-			MV->pushMatrix();
-				MV->translate(vec3(.9, .2, 0));
-				MV->rotate(rWing, vec3(0, 0, 1));
-				MV->translate(vec3(0, -.7, 0));
-				MV->scale(vec3(.18, .9, .5));
+			M->pushMatrix();
+				M->translate(vec3(.9, .2, 0));
+				M->rotate(rWing, vec3(0, 0, 1));
+				M->translate(vec3(0, -.7, 0));
+				M->scale(vec3(.18, .9, .5));
 			  	SetMaterial(1);
-		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
 		  	  	shape->draw(prog);
-			MV->popMatrix();
+			M->popMatrix();
 
 			/* Left Foot */
-			MV->pushMatrix();
-				MV->rotate(-lfTheta, vec3(1, 0, 0));
-				MV->rotate(-.15, vec3(0, .8, 0));
-				MV->translate(vec3(-.35, -1.4, .0));
-				MV->scale(vec3(.25, .10, .49));
+			M->pushMatrix();
+				M->rotate(-lfTheta, vec3(1, 0, 0));
+				M->rotate(-.15, vec3(0, .8, 0));
+				M->translate(vec3(-.35, -1.4, .0));
+				M->scale(vec3(.25, .10, .49));
 			  	SetMaterial(2);
-		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
 		  	  	cube->draw(prog);
-			MV->popMatrix();
+			M->popMatrix();
 
 			/* Right Foot */
-			MV->pushMatrix();
-				MV->rotate(-rfTheta, vec3(1, 0, 0));
-				MV->rotate(.15, vec3(0, 1, 0));
-				MV->translate(vec3(.35, -1.4, .0));
-				MV->scale(vec3(.25, .10, .49));
+			M->pushMatrix();
+				M->rotate(-rfTheta, vec3(1, 0, 0));
+				M->rotate(.15, vec3(0, 1, 0));
+				M->translate(vec3(.35, -1.4, .0));
+				M->scale(vec3(.25, .10, .49));
 			  	SetMaterial(2);
-		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
 		  	  	cube->draw(prog);
-			MV->popMatrix();
+			M->popMatrix();
 
 			/* Body */
-		  	MV->scale(vec3(1, 1.4, 1));
+		  	M->scale(vec3(1, 1.4, 1));
 		  	SetMaterial(0);
-	  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()) );
+	  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()) );
 	  	  	shape->draw(prog);
-   		MV->popMatrix();
-   	MV->popMatrix();
+   		M->popMatrix();
+   	M->popMatrix();
 
-   	MV->pushMatrix();
-   		MV->translate(vec3(0, -2, 0));
-		MV->scale(vec3(500, .1, 500));
+   	M->pushMatrix();
+   		M->translate(vec3(0, -2, 0));
+		M->scale(vec3(500, .1, 500));
 	  	SetMaterial(1);
-  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   	  	cube->draw(prog);
-   	MV->popMatrix();
+   	M->popMatrix();
 
    	P->popMatrix();
 
@@ -348,13 +389,15 @@ static void error_callback(int error, const char *description)
 /* key callback */
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
+	/*float speed = .1;*/
+	float speed = .25;
 	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
 
 	/* Move Left */
 	else if (key == GLFW_KEY_A && action == GLFW_REPEAT) {
-		xMove -= .1;
+		xMove -= .2;
 
 		/* Rotate penguin slight left */
 		if (pTheta > -30){
@@ -396,7 +439,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 	/* Move Left */
 
 	else if (key == GLFW_KEY_D && action == GLFW_REPEAT) {
-		xMove += .1;
+		xMove += .2;
 
 		/* Rotate penguin slight right*/
 		if (pTheta < 30){
@@ -437,7 +480,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 	/* Regular Jump */
 	else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-		pHeight = 2;
+		pHeight = 1.75;
 		rfTheta = -.5;
 		lfTheta = -.5;
 		rWing = -4;
@@ -446,7 +489,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 	/* Spinning Jump */
 	else if (key == GLFW_KEY_SPACE && action == GLFW_REPEAT) {
-		pHeight = 2;
+		pHeight = 4;
 		if (pTheta < 0){
 			pTheta -= 20;
 		}
@@ -465,6 +508,19 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 		lWing = 0;
 	}
 
+
+	else if (key == GLFW_KEY_UP) {	// forward
+		eye += speed * LA;
+	}
+	else if (key == GLFW_KEY_DOWN) {	// back
+		eye -= speed * LA;
+	}
+	else if (key == GLFW_KEY_LEFT) {	// left
+		eye -= normalize(cross(LA, up)) * speed;
+	}
+	else if (key == GLFW_KEY_RIGHT) {	// right
+		eye += normalize(cross(LA, up)) * speed;
+	}
 	/*} else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 		gMat = (gMat+1)%4;
 	}*/ else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
@@ -472,6 +528,25 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 	} else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
 		sTheta -= 5;
 	}	
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+
+	double deltax = xpos - oldx;
+	double deltay = ypos - oldy;
+
+	theta += deltax * 3.14159265359 / g_width;
+	phi += deltay * 3.14159265359 / g_height;
+
+	if (phi >= 80) {
+		phi = 80;
+	}
+	if (phi <= -80) {
+		phi = -80;
+	}
+
+	oldx = xpos;
+	oldy = ypos;
 }
 
 /* resize window call back */
@@ -554,6 +629,10 @@ int main(int argc, char **argv)
 	glfwSwapInterval(1);
 	// Set keyboard callback.
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPos(window, g_width/2.0, g_height/2.0);
+	glfwGetCursorPos(window, &oldx, &oldy);
+	glfwSetCursorPosCallback(window, cursor_position_callback);
    	//set the window resize call back
    	glfwSetFramebufferSizeCallback(window, resize_callback);
 
