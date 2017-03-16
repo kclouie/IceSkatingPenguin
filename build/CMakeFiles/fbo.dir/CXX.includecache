@@ -1029,6 +1029,8 @@ Shape.h
 /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/src/Shape.h
 GLTextureWriter.h
 /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/src/GLTextureWriter.h
+Texture.h
+/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/src/Texture.h
 glm/gtc/type_ptr.hpp
 -
 glm/gtc/matrix_transform.hpp
