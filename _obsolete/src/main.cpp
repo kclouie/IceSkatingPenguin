@@ -323,8 +323,16 @@ static void render()
 	  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()) );
 	  	  	shape->draw(prog);
    		MV->popMatrix();
- 
    	MV->popMatrix();
+
+   	MV->pushMatrix();
+   		MV->translate(vec3(0, -2, 0));
+		MV->scale(vec3(500, .1, 500));
+	  	SetMaterial(1);
+  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
+  	  	cube->draw(prog);
+   	MV->popMatrix();
+
    	P->popMatrix();
 
 	prog->unbind();
@@ -375,12 +383,12 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 				rWingOut = TRUE;
 			}
 		}
-
-		if (rfTheta > -1){
+ 
+		if (rfTheta > -1){					// Lift Right Foot
 			rfTheta -= .25;
 		}
 
-		if (lfTheta < 0){
+		if (lfTheta < 0){					// Lower Left Foot
 			lfTheta += .25;
 		}
 	}
@@ -418,11 +426,11 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 			}
 		}
 
-		if (rfTheta < 0){
+		if (rfTheta < 0){						// Lower Right Foot
 			rfTheta += .25;
 		}
 
-		if (lfTheta > -1){
+		if (lfTheta > -1){						// Lift Left Foot
 			lfTheta -= .25;
 		}
 	}
