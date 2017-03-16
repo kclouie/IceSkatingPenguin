@@ -41,8 +41,14 @@ float Lx = 1, Ly = 1, Lz = 1;
 
 double xMove, lWing, rWing;
 
+float pTheta;	// Rotates entire penguin 
+float rfTheta; 	// Rotates penguin's right foot
+float lfTheta;	// Rotates penguin's left foot
+
 int lWingIn = FALSE, lWingOut = FALSE;
 int rWingIn = FALSE, rWingOut = FALSE;
+
+float pHeight;	// Raise penguin
 
 //global reference to texture FBO
 GLuint frameBuf[2];
@@ -113,10 +119,15 @@ static void initGL()
   	glfwGetFramebufferSize(window, &width, &height);
 
 	sTheta = 0;
+	pTheta = 0;
+	rfTheta = 0;
+	lfTheta = 0;
 
 	xMove = 0;
 	lWing = -.1;
 	rWing = .1;
+
+	pHeight = 0;
 	// Set background color.
 	glClearColor(.12f, .34f, .56f, 1.0f);
 	// Enable z-buffer test.
@@ -231,8 +242,8 @@ static void render()
 	//globl transforms for 'camera'
    	MV->pushMatrix();
     	MV->loadIdentity();
-	 	MV->translate(vec3(xMove, 0, -15));
-	 	MV->rotate(radians(-sTheta), vec3(0, 1, 0));
+	 	MV->translate(vec3(xMove, pHeight, -15));
+	 	MV->rotate(radians(pTheta), vec3(0, 1, 0));
 	  	/* Body */	
 		MV->pushMatrix();
   			/* Left Eye */
@@ -286,8 +297,9 @@ static void render()
 
 			/* Left Foot */
 			MV->pushMatrix();
-				MV->translate(vec3(-.35, -1.4, .05));
+				MV->rotate(-lfTheta, vec3(1, 0, 0));
 				MV->rotate(-.15, vec3(0, .8, 0));
+				MV->translate(vec3(-.35, -1.4, .05));
 				MV->scale(vec3(.25, .10, .49));
 			  	SetMaterial(2);
 		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
@@ -296,8 +308,9 @@ static void render()
 
 			/* Right Foot */
 			MV->pushMatrix();
-				MV->translate(vec3(.35, -1.4, .05));
+				MV->rotate(-rfTheta, vec3(1, 0, 0));
 				MV->rotate(.15, vec3(0, 1, 0));
+				MV->translate(vec3(.35, -1.4, .05));
 				MV->scale(vec3(.25, .10, .49));
 			  	SetMaterial(2);
 		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
@@ -334,6 +347,11 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 	/* Move Left */
 	else if (key == GLFW_KEY_A && action == GLFW_REPEAT) {
 		xMove -= .1;
+
+		/* Rotate penguin slight left */
+		if (pTheta > -30){
+			pTheta -= 8;
+		}
 		/* Control Left Wing */
 		if (lWing < 0 && lWingOut == TRUE) { // Return to first from Low
 			lWing += .2;
@@ -357,12 +375,25 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 				rWingOut = TRUE;
 			}
 		}
+
+		if (rfTheta > -1){
+			rfTheta -= .25;
+		}
+
+		if (lfTheta < 0){
+			lfTheta += .25;
+		}
 	}
 
 	/* Move Left */
 
 	else if (key == GLFW_KEY_D && action == GLFW_REPEAT) {
 		xMove += .1;
+
+		/* Rotate penguin slight right*/
+		if (pTheta < 30){
+			pTheta += 8;
+		}
 		/* Control Left Wing */
 		if (lWing < 0 && lWingIn == TRUE) {	// Return to first from High
 			lWing += .4;
@@ -386,29 +417,48 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 				rWingIn = TRUE;
 			}
 		}
+
+		if (rfTheta < 0){
+			rfTheta += .25;
+		}
+
+		if (lfTheta > -1){
+			lfTheta -= .25;
+		}
 	}
+
+	/* Regular Jump */
+	else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+		pHeight = 2;
+		rfTheta = -.5;
+		lfTheta = -.5;
+		rWing = -4;
+		lWing = 4;
+	}
+
+	/* Spinning Jump */
+	else if (key == GLFW_KEY_SPACE && action == GLFW_REPEAT) {
+		pHeight = 2;
+		pTheta += 20;
+	}
+
+	/* Landing */
+	else if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
+		pHeight = 0;
+		pTheta = 0;
+		rfTheta = 0;
+		lfTheta = 0;
+		rWing = 0;
+		lWing = 0;
+	}
+
 	/*} else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 		gMat = (gMat+1)%4;
 	}*/ else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
 		sTheta += 5;
 	} else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
 		sTheta -= 5;
-	}
-
-	
-	/*if (key == GLFW_KEY_J && action == GLFW_PRESS) {
-		Lx-=.5;
-	}
-	else if (key == GLFW_KEY_L && action == GLFW_PRESS) {
-		Lx+=.5;
-	}
-	else if (key == GLFW_KEY_I && action == GLFW_PRESS) {
-		Ly+=.5;
-	}
-	else if (key == GLFW_KEY_K && action == GLFW_PRESS) {
-		Ly-=.5;
-	}*/
-	
+	}	
 }
 
 /* resize window call back */
