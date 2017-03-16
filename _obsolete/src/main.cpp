@@ -299,7 +299,7 @@ static void render()
 			MV->pushMatrix();
 				MV->rotate(-lfTheta, vec3(1, 0, 0));
 				MV->rotate(-.15, vec3(0, .8, 0));
-				MV->translate(vec3(-.35, -1.4, .05));
+				MV->translate(vec3(-.35, -1.4, .0));
 				MV->scale(vec3(.25, .10, .49));
 			  	SetMaterial(2);
 		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
@@ -310,7 +310,7 @@ static void render()
 			MV->pushMatrix();
 				MV->rotate(-rfTheta, vec3(1, 0, 0));
 				MV->rotate(.15, vec3(0, 1, 0));
-				MV->translate(vec3(.35, -1.4, .05));
+				MV->translate(vec3(.35, -1.4, .0));
 				MV->scale(vec3(.25, .10, .49));
 			  	SetMaterial(2);
 		  	  	glUniformMatrix4fv(prog->getUniform("MV"), 1, GL_FALSE,value_ptr(MV->topMatrix()));
@@ -447,7 +447,12 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 	/* Spinning Jump */
 	else if (key == GLFW_KEY_SPACE && action == GLFW_REPEAT) {
 		pHeight = 2;
-		pTheta += 20;
+		if (pTheta < 0){
+			pTheta -= 20;
+		}
+		else {
+			pTheta += 20;
+		}
 	}
 
 	/* Landing */
