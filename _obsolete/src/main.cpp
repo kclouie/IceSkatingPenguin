@@ -29,26 +29,35 @@ using namespace glm;
 GLFWwindow *window; // Main application window
 string RESOURCE_DIR = ""; // Where the resources are loaded from
 shared_ptr<Program> prog, tex_prog;
+
 shared_ptr<Shape> shape;
 shared_ptr<Shape> cube;
 shared_ptr<Shape> bunny;
+shared_ptr<Shape> tree;
+
+double randPos[40];
 
 int g_width = 512;
 int g_height = 512;
 float sTheta;
 int gMat = 1;
 int FirstTime = 1;
+int firstPass;
 float Lx = 50, Ly = 50, Lz = 30;
 
 double oldx, oldy;
 double phi, theta;
 vec3 eye, LA, up;
 
-double xMove, lWing, rWing;
+double xMove, zMove, lWing, rWing;
 
 float pTheta;	// Rotates entire penguin 
 float rfTheta; 	// Rotates penguin's right foot
 float lfTheta;	// Rotates penguin's left foot
+float faceTheta;
+
+float xExpand, yExpand;
+int deflate;
 
 int lWingIn = FALSE, lWingOut = FALSE;
 int rWingIn = FALSE, rWingOut = FALSE;
@@ -127,7 +136,7 @@ static void initGL()
 	oldy = 0;
 	phi = 0;
 	theta = 0;
-	LA = vec3(5, 0, 0);
+	LA = vec3(0, 0, -15);
 	eye = vec3(0, 0, 0);
 	up = vec3(0, 1, 0);
 
@@ -135,10 +144,12 @@ static void initGL()
 	pTheta = 0;
 	rfTheta = 0;
 	lfTheta = 0;
+	faceTheta = 0;
 
 	xMove = 0;
-	lWing = -.1;
-	rWing = .1;
+	zMove = -15;
+	lWing = .1;
+	rWing = -.1;
 
 	pHeight = 0;
 	// Set background color.
@@ -161,6 +172,11 @@ static void initGL()
 	bunny->loadMesh(RESOURCE_DIR + "bunny.obj");
 	bunny->resize();
 	bunny->init();
+
+	tree = make_shared<Shape>();
+	tree->loadMesh(RESOURCE_DIR + "lowpolytree.obj");
+	tree->resize();
+	tree->init();
 
 	//Initialize the geometry to render a quad to the screen
 	initQuad();
@@ -251,6 +267,7 @@ static void render()
    	auto M = make_shared<MatrixStack>();
    	// Apply perspective projection.
    	P->pushMatrix();
+   	/*P->perspective(45.0f, aspect, 0.01f, 100.0f);*/
    	P->perspective(45.0f, aspect, 0.01f, 100.0f);
 
 	// Draw our scene - two meshes
@@ -258,15 +275,22 @@ static void render()
 	glUniform3f(prog->getUniform("LPos"), Lx, Ly, Lz);
 	glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(P->topMatrix()));
 
-	LA = vec3((cos(glm::radians(phi)) * cos(glm::radians(theta))),
+	/*if (firstPass == TRUE) {
+		eye = vec3(0, 0, 0);
+		LA = vec3(0, 0, -15);
+		firstPass = FALSE;
+	}
+	else {
+		LA = vec3((cos(glm::radians(phi)) * cos(glm::radians(theta))),
 		  (sin(glm::radians(phi))),
-		  (cos(glm::radians(phi)) * cos((3.14159265359 / 2) - glm::radians(theta))));
-
+		  (cos(glm::radians(phi)) * sin(glm::radians(theta))));
+	}
+*/
 	glm::mat4 V = lookAt(eye, eye + LA, up);
 	glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE,value_ptr(V));
 
 	//globl transforms for 'camera'
-	M->pushMatrix();
+	/*M->pushMatrix();
 		M->translate(vec3(0, 0, -5));
 		SetMaterial(0);
   	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
@@ -278,17 +302,33 @@ static void render()
 		SetMaterial(1);
   	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   	  	bunny->draw(prog);
+	M->popMatrix();*/
+
+
+	/* Draw Trees */
+	M->pushMatrix();
+		M->loadIdentity();
+		for (int i = 0; i < 20; i++){
+			M->translate(vec3(randPos[i * 3 + 0], 2, randPos[i * 3 + 1]));
+			M->scale(vec3(3, 3, 3));
+			SetMaterial(4);
+  			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+  			tree->draw(prog);
+		}
 	M->popMatrix();
 
+	/* Draw Skater */
    	M->pushMatrix();
     	M->loadIdentity();
-	 	/*M->translate(vec3(xMove, pHeight, -15));*/
-	 	M->translate(vec3(LA.x + xMove, LA.y + pHeight, LA.z));
+	 	M->translate(vec3(xMove, pHeight, zMove));
+	 	/*M->translate(vec3(LA.x + xMove + 5, LA.y + pHeight, LA.z));*/
 	 	M->rotate(radians(pTheta), vec3(0, 1, 0));
+	 	M->scale(vec3(xExpand, yExpand, 1));	// Set Breathing
 	  	/* Body */	
 		M->pushMatrix();
   			/* Left Eye */
 			M->pushMatrix();
+				M->rotate(radians(faceTheta), vec3(0, 1, 0));
 				M->translate(vec3(-.2, .3, .85));
 				M->scale(vec3(.1, .1, .1));
 			  	SetMaterial(1);
@@ -298,6 +338,7 @@ static void render()
 
 			/* Right Eye */
 			M->pushMatrix();
+				M->rotate(radians(faceTheta), vec3(0, 1, 0));
 				M->translate(vec3(.2, .3, .85));
 				M->scale(vec3(.1, .1, .1));
 			  	SetMaterial(1);
@@ -307,6 +348,7 @@ static void render()
 
 			/* Nose */
 			M->pushMatrix();
+				M->rotate(radians(faceTheta), vec3(0, 1, 0));
 				M->translate(vec3(0, .1, .5));
 				M->scale(vec3(.1, .1, .75));
 			  	SetMaterial(2);
@@ -317,7 +359,7 @@ static void render()
 			/* Left Wing */
 			M->pushMatrix();
 				M->translate(vec3(-.9, .2, 0));
-				M->rotate(lWing, vec3(0, 0, 1));
+				M->rotate(rWing, vec3(0, 0, 1));
 				M->translate(vec3(0, -.7, 0));
 				M->scale(vec3(.18, .9, .5));
 			  	SetMaterial(1);
@@ -328,7 +370,7 @@ static void render()
 			/* Right Wing */
 			M->pushMatrix();
 				M->translate(vec3(.9, .2, 0));
-				M->rotate(rWing, vec3(0, 0, 1));
+				M->rotate(lWing, vec3(0, 0, 1));
 				M->translate(vec3(0, -.7, 0));
 				M->scale(vec3(.18, .9, .5));
 			  	SetMaterial(1);
@@ -338,7 +380,7 @@ static void render()
 
 			/* Left Foot */
 			M->pushMatrix();
-				M->rotate(-lfTheta, vec3(1, 0, 0));
+				M->rotate(-rfTheta, vec3(1, 0, 0));
 				M->rotate(-.15, vec3(0, .8, 0));
 				M->translate(vec3(-.35, -1.4, .0));
 				M->scale(vec3(.25, .10, .49));
@@ -349,7 +391,7 @@ static void render()
 
 			/* Right Foot */
 			M->pushMatrix();
-				M->rotate(-rfTheta, vec3(1, 0, 0));
+				M->rotate(-lfTheta, vec3(1, 0, 0));
 				M->rotate(.15, vec3(0, 1, 0));
 				M->translate(vec3(.35, -1.4, .0));
 				M->scale(vec3(.25, .10, .49));
@@ -378,6 +420,17 @@ static void render()
 
 	prog->unbind();
 
+	if (xExpand < 1.04 && deflate == FALSE) {
+		xExpand += .0009;
+	}
+	else {
+		deflate = TRUE;
+		xExpand -= .0009;
+		if (xExpand == 1) {
+			deflate = FALSE;
+		}
+	}
+
 }
 
 /* helper function */
@@ -396,116 +449,177 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 	}
 
 	/* Move Left */
-	else if (key == GLFW_KEY_A && action == GLFW_REPEAT) {
+	else if (key == GLFW_KEY_A) {
 		xMove -= .2;
+		faceTheta = 0;
 
 		/* Rotate penguin slight left */
-		if (pTheta > -30){
-			pTheta -= 8;
-		}
-		/* Control Left Wing */
-		if (lWing < 0 && lWingOut == TRUE) { // Return to first from Low
-			lWing += .2;
-		}
-		else {
-			lWingOut = FALSE;				// Advance to High
-			if (lWing > -1.75) {
-				lWing -= .3;
-				lWingIn = TRUE;
-			}
-		}
+		if (pTheta > -32) pTheta -= 8;
 
 		/* Control Right Wing */
-		if (rWing > 0 && rWingIn == TRUE) {	// Return to first from High
-			rWing -= .4;
-		}
+		if (rWing < 0 && rWingOut == TRUE) rWing += .2; // Return to first from Low
 		else {
-			rWingIn = FALSE;				// Advance to Low
-			if (rWing <= .75){
-				rWing += .15;
-				rWingOut = TRUE;
-			}
-		}
- 
-		if (rfTheta > -1){					// Lift Right Foot
-			rfTheta -= .25;
-		}
-
-		if (lfTheta < 0){					// Lower Left Foot
-			lfTheta += .25;
-		}
-	}
-
-	/* Move Left */
-
-	else if (key == GLFW_KEY_D && action == GLFW_REPEAT) {
-		xMove += .2;
-
-		/* Rotate penguin slight right*/
-		if (pTheta < 30){
-			pTheta += 8;
-		}
-		/* Control Left Wing */
-		if (lWing < 0 && lWingIn == TRUE) {	// Return to first from High
-			lWing += .4;
-		}
-		else {
-			lWingIn = FALSE;				// Advance to Low
-			if (lWing > -.75) {
-				lWing -= .15;
-				lWingOut = TRUE;
-			}
-		}
-
-		/* Control Right Wing */
-		if (rWing > 0 && rWingOut == TRUE) {	// Return to first from Low
-			rWing -= .2;
-		}
-		else {
-			rWingOut = FALSE;					// Advance to High
-			if (rWing <= 1.75){
-				rWing += .3;
+			rWingOut = FALSE;				// Advance to High
+			if (rWing > -1.75) {
+				rWing -= .3;
 				rWingIn = TRUE;
 			}
 		}
 
-		if (rfTheta < 0){						// Lower Right Foot
-			rfTheta += .25;
+		/* Control Left Wing */
+		if (lWing > 0 && lWingIn == TRUE) lWing -= .4;	// Return to first from High
+		else {
+			lWingIn = FALSE;				// Advance to Low
+			if (lWing <= .75){
+				lWing += .15;
+				lWingOut = TRUE;
+			}
+		}
+ 
+		if (lfTheta > -1) lfTheta -= .25;	// Lift Right Foot
+		if (rfTheta < 0) rfTheta += .25;	// Lower Left Foot
+	}
+
+	/* Move Right */
+	else if (key == GLFW_KEY_D) {
+		xMove += .2;
+		faceTheta = 0;
+
+		/* Rotate penguin slight right*/
+		if (pTheta < 32) pTheta += 8;
+
+		/* Control Right Wing */
+		if (rWing < 0 && rWingIn == TRUE) rWing += .4;	// Return to first from High
+		else {
+			rWingIn = FALSE;				// Advance to Low
+			if (rWing > -.75) {
+				rWing -= .15;
+				rWingOut = TRUE;
+			}
 		}
 
-		if (lfTheta > -1){						// Lift Left Foot
-			lfTheta -= .25;
+		/* Control Left Wing */
+		if (lWing > 0 && lWingOut == TRUE) lWing -= .2;	// Return to first from Low
+		else {
+			lWingOut = FALSE;					// Advance to High
+			if (lWing <= 1.75){
+				lWing += .3;
+				lWingIn = TRUE;
+			}
 		}
+
+		if (lfTheta < 0) lfTheta += .25;		// Lower Right Foot
+		if (rfTheta > -1) rfTheta -= .25;		// Lift Left Foot
+	}
+	// ---------------------------------------
+
+	/* Skate backwards */
+	else if (key == GLFW_KEY_W) {
+		zMove -= .2;
+		if (faceTheta < 32) faceTheta += 8;
+		if (pTheta < 0) pTheta += 8;
+		else if (pTheta > 0) pTheta -= 8;
+		if (pTheta == 0) {
+			if (rWing > -1.5) rWing -= .3;
+			if (lWing < 1.5) lWing += .3;
+
+			if (rfTheta < 0) rfTheta += .3;
+			if (lfTheta < 0) lfTheta += .3;
+		}
+	}
+
+	/* Skate forward */
+	else if (key == GLFW_KEY_S) {
+		zMove += .2;
+		faceTheta = 0;
+
+		if (pTheta < 0) pTheta += 8;
+		else if (pTheta > 0) pTheta -= 8;
+		if (pTheta == 0) {
+			if (rWing > -1.5) rWing -= .3;
+			if (lWing < 1.5) lWing += .3;
+
+			if (lfTheta < 0) lfTheta += .25;		// Lower Right Foot
+			if (rfTheta > -1) rfTheta -= .1;		// Lift Left Foot
+		}
+	}
+
+	/* Grounded Left Turn */
+	else if (key == GLFW_KEY_Q && action == GLFW_REPEAT) {
+		faceTheta = 0;
+
+		rfTheta = 0;
+		lfTheta = 0;
+		lWing = -3;
+		rWing = -1.5;
+		if (pTheta < 0) pTheta -= 25;
+		else pTheta += 25;
+	}
+
+	/* Left Turn Recovery */
+	else if (key == GLFW_KEY_Q && action == GLFW_RELEASE) {
+		faceTheta = 0;
+
+		pTheta = 0;
+		lfTheta = 0;
+		rfTheta = 0;
+		lWing = 0;
+		rWing = 0;
+	}
+
+	/* Grounded Right Turn */
+	else if (key == GLFW_KEY_E && action == GLFW_REPEAT) {
+		faceTheta = 0;
+
+		rfTheta = 0;
+		lfTheta = 0;
+		lWing = 1.5;
+		rWing = -3;
+		if (pTheta < 0) pTheta -= 25;
+		else pTheta += 25;
+	}
+
+	/* Right Turn Recovery */
+	else if (key == GLFW_KEY_E && action == GLFW_RELEASE) {
+		faceTheta = 0;
+
+		pTheta = 0;
+		lfTheta = 0;
+		rfTheta = 0;
+		lWing = 0;
+		rWing = 0;
 	}
 
 	/* Regular Jump */
 	else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+		faceTheta = 0;
+
 		pHeight = 1.75;
-		rfTheta = -.5;
 		lfTheta = -.5;
-		rWing = -4;
-		lWing = 4;
+		rfTheta = -.5;
+		lWing = -4;
+		rWing = 4;
 	}
 
 	/* Spinning Jump */
 	else if (key == GLFW_KEY_SPACE && action == GLFW_REPEAT) {
-		pHeight = 4;
-		if (pTheta < 0){
-			pTheta -= 20;
-		}
-		else {
-			pTheta += 20;
-		}
+		faceTheta = 0;
+
+		pHeight = 2;
+		if (pTheta < 0) pTheta -= 25;
+		else pTheta += 25;
 	}
 
 	/* Landing */
 	else if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
+		faceTheta = 0;
+
 		pHeight = 0;
 		pTheta = 0;
-		rfTheta = 0;
 		lfTheta = 0;
-		rWing = 0;
+		rfTheta = 0;
 		lWing = 0;
+		rWing = 0;
 	}
 
 
@@ -531,9 +645,16 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 }
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
+	double deltax, deltay;
 
-	double deltax = xpos - oldx;
-	double deltay = ypos - oldy;
+	if (firstPass == TRUE) {
+		deltax = 0;
+		deltay = 0;
+	}
+	else {
+		deltax = xpos - oldx;
+		deltay = ypos - oldy;
+	}
 
 	theta += deltax * 3.14159265359 / g_width;
 	phi += deltay * 3.14159265359 / g_height;
@@ -547,6 +668,10 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 
 	oldx = xpos;
 	oldy = ypos;
+
+	LA = normalize(vec3((cos(glm::radians(phi)) * cos(glm::radians(theta))),
+		  (sin(glm::radians(phi))),
+		  (cos(glm::radians(phi)) * sin(glm::radians(theta)))));
 }
 
 /* resize window call back */
@@ -559,7 +684,7 @@ static void resize_callback(GLFWwindow *window, int width, int height) {
 //helper function to set materials for shadin
 void SetMaterial(int i) {
   	switch (i) {
-	    case 0: //shiny blue plastic
+	    case 0: // shiny blue plastic
 	 		glUniform3f(prog->getUniform("MatAmb"), 0.02, 0.04, 0.2);
 	 		glUniform3f(prog->getUniform("MatDif"), 0.0, 0.16, 0.9);
 	 		glUniform3f(prog->getUniform("MatSpec"), 0.14, 0.2, 0.8); 
@@ -571,18 +696,24 @@ void SetMaterial(int i) {
 	 		glUniform3f(prog->getUniform("MatSpec"), 0.3, 0.3, 0.4); 
 	 		glUniform1f(prog->getUniform("shine"), 4.0);
 	      	break;
-	    case 2: //brass
+	    case 2: // brass
 	 		glUniform3f(prog->getUniform("MatAmb"), 0.3294, 0.2235, 0.02745);
 	 		glUniform3f(prog->getUniform("MatDif"), 0.7804, 0.5686, 0.11373);
 	 		glUniform3f(prog->getUniform("MatSpec"), 0.9922, 0.941176, 0.80784); 
 	 		glUniform1f(prog->getUniform("shine"), 27.9);
 	      	break;
-		 case 3: //copper
+		case 3: // copper
 	 		glUniform3f(prog->getUniform("MatAmb"), 0.1913, 0.0735, 0.0225);
 	 		glUniform3f(prog->getUniform("MatDif"), 0.7038, 0.27048, 0.0828);
 	 		glUniform3f(prog->getUniform("MatSpec"), 0.257, 0.1376, 0.08601); 
 	 		glUniform1f(prog->getUniform("shine"), 12.8);
 	      	break;
+	    case 4: // tree green
+	 		glUniform3f(prog->getUniform("MatAmb"), 0.02, 0.04, 0.2);
+	 		glUniform3f(prog->getUniform("MatDif"), 0.0, 0.9, 0.16);
+	 		glUniform3f(prog->getUniform("MatSpec"), 0.14, 0.2, 0.8); 
+	 		glUniform1f(prog->getUniform("shine"), 120.0);
+	 		break;
 	}
 }
 
@@ -637,7 +768,18 @@ int main(int argc, char **argv)
    	glfwSetFramebufferSizeCallback(window, resize_callback);
 
 	// Initialize scene. Note geometry initialized in init now
+   	for (int i = 0; i < 20; i++) {
+   		randPos[i * 3 + 0] = rand() % (10 - 10 + 1) + 10;	// randX
+	 	randPos[i * 3 + 1] = rand() % (-6 + 7 + 1) - 7;	// randZ
+	 }
+
+	 firstPass = FALSE;
+	 xExpand = 1;
+	 yExpand = 1;
+	 deflate = FALSE;
+
 	initGL();
+
 
 	// Loop until the user closes the window.
 	while(!glfwWindowShouldClose(window)) {
