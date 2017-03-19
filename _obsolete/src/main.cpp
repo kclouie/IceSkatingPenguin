@@ -40,6 +40,8 @@ shared_ptr<Shape> dog;
 
 double randPos[40];
 
+int restrict = TRUE;
+
 int g_width = 512;
 int g_height = 512;
 float sTheta;
@@ -220,7 +222,7 @@ static void initGL()
 	tex_prog->addAttribute("vertPos");
 
 	dog = make_shared<Shape>();
-   	dog->loadMesh(RESOURCE_DIR + "dog.obj");
+   	dog->loadMesh(RESOURCE_DIR + "cube2.obj");
    	dog->resize();
    	dog->init();
 
@@ -230,7 +232,7 @@ static void initGL()
 	prog0->init();
 
 	texture0 = make_shared<Texture>();
-   	texture0->setFilename(RESOURCE_DIR + "fur.jpg");
+   	texture0->setFilename(RESOURCE_DIR + "snow_1.jpg");
    	texture0->init();
    	texture0->setUnit(0);
    	texture0->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
@@ -320,13 +322,6 @@ static void render()
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		}
-	M->popMatrix();
-
-	M->pushMatrix();
-		M->translate(vec3(0, 0, 5));
-	  	SetMaterial(4);
-  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
-  	  	bunny->draw(prog);
 	M->popMatrix();
 
 	/* Draw Skater */
@@ -432,7 +427,7 @@ static void render()
 
 	prog->unbind();
 
-	auto MV = make_shared<MatrixStack>();
+	/*auto MV = make_shared<MatrixStack>();
 	auto P2 = make_shared<MatrixStack>();
 	//draw the dog mesh 	
 	prog0->bind();
@@ -442,13 +437,13 @@ static void render()
 	MV->pushMatrix();
 		MV->loadIdentity();	
 		MV->pushMatrix();
-		    MV->translate(vec3(0, 0.5, 0));
-		    MV->scale(vec3(1, 1, 1));	
+		    MV->translate(vec3(0, 0.5, -.5));
+		    MV->scale(vec3(.5, .5, .5));	
 			glUniformMatrix4fv(prog0->getUniform("MV"), 1, GL_FALSE, value_ptr(MV->topMatrix()));
 		   	dog->draw(prog0);
 		MV->popMatrix();
 	MV->popMatrix();
-	prog0->unbind();
+	prog0->unbind();*/
 
 	if (xExpand < 1.04 && deflate == FALSE) {
 		xExpand += .0009;
@@ -475,203 +470,211 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 {
 	/*float speed = .1;*/
 	float speed = .25;
-	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, GL_TRUE);
-	}
 
-	/* Move Left */
-	else if (key == GLFW_KEY_A) {
-		xMove -= .2;
-		faceTheta = 0;
-
-		/* Rotate penguin slight left */
-		if (pTheta > -32) pTheta -= 8;
-
-		/* Control Right Wing */
-		if (rWing < 0 && rWingOut == TRUE) rWing += .4; // Return to first from Low
-		else {
-			rWingOut = FALSE;				// Advance to High
-			if (rWing > -1.75) {
-				rWing -= .3;
-				rWingIn = TRUE;
-			}
-		}
-
-		/* Control Left Wing */
-		if (lWing > 0 && lWingIn == TRUE) lWing -= .4;	// Return to first from High
-		else {
-			lWingIn = FALSE;				// Advance to Low
-			if (lWing <= .75){
-				lWing += .15;
-				lWingOut = TRUE;
-			}
-		}
- 
-		if (lfTheta > -1) lfTheta -= .25;	// Lift Right Foot
-		if (rfTheta < 0) rfTheta += .25;	// Lower Left Foot
-	}
-
-	/* Move Right */
-	else if (key == GLFW_KEY_D) {
-		xMove += .2;
-		faceTheta = 0;
-
-		/* Rotate penguin slight right*/
-		if (pTheta < 32) pTheta += 8;
-
-		/* Control Right Wing */
-		if (rWing < 0 && rWingIn == TRUE) rWing += .4;	// Return to first from High
-		else {
-			rWingIn = FALSE;				// Advance to Low
-			if (rWing > -.75) {
-				rWing -= .15;
-				rWingOut = TRUE;
-			}
-		}
-
-		/* Control Left Wing */
-		if (lWing > 0 && lWingOut == TRUE) lWing -= .2;	// Return to first from Low
-		else {
-			lWingOut = FALSE;					// Advance to High
-			if (lWing <= 1.75){
-				lWing += .3;
-				lWingIn = TRUE;
-			}
-		}
-
-		if (lfTheta < 0) lfTheta += .25;		// Lower Right Foot
-		if (rfTheta > -1) rfTheta -= .25;		// Lift Left Foot
-	}
-	// ---------------------------------------
-
-	/* Skate backwards */
-	else if (key == GLFW_KEY_W) {
-		zMove -= .2;
-		if (faceTheta < 32) faceTheta += 8;
-		if (pTheta < 0) pTheta += 8;
-		else if (pTheta > 0) pTheta -= 8;
-		if (pTheta == 0) {
-			if (rWing > -1.5) rWing -= .3;
-			if (lWing < 1.5) lWing += .3;
-
-			if (rfTheta < 0) rfTheta += .3;
-			if (lfTheta < 0) lfTheta += .3;
+	if (restrict) {
+		if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 	}
+	else {
+		if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+			glfwSetWindowShouldClose(window, GL_TRUE);
+		}
 
-	/* Skate forward */
-	else if (key == GLFW_KEY_S) {
-		zMove += .2;
-		faceTheta = 0;
+		/* Move Left */
+		else if (key == GLFW_KEY_A) {
+			xMove -= .2;
+			faceTheta = 0;
 
-		if (pTheta < 0) pTheta += 8;
-		else if (pTheta > 0) pTheta -= 8;
-		if (pTheta == 0) {
-			if (rWing > -1.5) rWing -= .3;
-			if (lWing < 1.5) lWing += .3;
+			/* Rotate penguin slight left */
+			if (pTheta > -32) pTheta -= 8;
+
+			/* Control Right Wing */
+			if (rWing < 0 && rWingOut == TRUE) rWing += .4; // Return to first from Low
+			else {
+				rWingOut = FALSE;				// Advance to High
+				if (rWing > -1.75) {
+					rWing -= .3;
+					rWingIn = TRUE;
+				}
+			}
+
+			/* Control Left Wing */
+			if (lWing > 0 && lWingIn == TRUE) lWing -= .4;	// Return to first from High
+			else {
+				lWingIn = FALSE;				// Advance to Low
+				if (lWing <= .75){
+					lWing += .15;
+					lWingOut = TRUE;
+				}
+			}
+	 
+			if (lfTheta > -1) lfTheta -= .25;	// Lift Right Foot
+			if (rfTheta < 0) rfTheta += .25;	// Lower Left Foot
+		}
+
+		/* Move Right */
+		else if (key == GLFW_KEY_D) {
+			xMove += .2;
+			faceTheta = 0;
+
+			/* Rotate penguin slight right*/
+			if (pTheta < 32) pTheta += 8;
+
+			/* Control Right Wing */
+			if (rWing < 0 && rWingIn == TRUE) rWing += .4;	// Return to first from High
+			else {
+				rWingIn = FALSE;				// Advance to Low
+				if (rWing > -.75) {
+					rWing -= .15;
+					rWingOut = TRUE;
+				}
+			}
+
+			/* Control Left Wing */
+			if (lWing > 0 && lWingOut == TRUE) lWing -= .2;	// Return to first from Low
+			else {
+				lWingOut = FALSE;					// Advance to High
+				if (lWing <= 1.75){
+					lWing += .3;
+					lWingIn = TRUE;
+				}
+			}
 
 			if (lfTheta < 0) lfTheta += .25;		// Lower Right Foot
-			if (rfTheta > -1) rfTheta -= .1;		// Lift Left Foot
+			if (rfTheta > -1) rfTheta -= .25;		// Lift Left Foot
 		}
+		// ---------------------------------------
+
+		/* Skate backwards */
+		else if (key == GLFW_KEY_W) {
+			zMove -= .2;
+			if (faceTheta < 32) faceTheta += 8;
+			if (pTheta < 0) pTheta += 8;
+			else if (pTheta > 0) pTheta -= 8;
+			if (pTheta == 0) {
+				if (rWing > -1.5) rWing -= .3;
+				if (lWing < 1.5) lWing += .3;
+
+				if (rfTheta < 0) rfTheta += .3;
+				if (lfTheta < 0) lfTheta += .3;
+			}
+		}
+
+		/* Skate forward */
+		else if (key == GLFW_KEY_S) {
+			zMove += .2;
+			faceTheta = 0;
+
+			if (pTheta < 0) pTheta += 8;
+			else if (pTheta > 0) pTheta -= 8;
+			if (pTheta == 0) {
+				if (rWing > -1.5) rWing -= .3;
+				if (lWing < 1.5) lWing += .3;
+
+				if (lfTheta < 0) lfTheta += .25;		// Lower Right Foot
+				if (rfTheta > -1) rfTheta -= .1;		// Lift Left Foot
+			}
+		}
+
+		/* Grounded Left Turn */
+		else if (key == GLFW_KEY_Q && action == GLFW_REPEAT) {
+			faceTheta = 0;
+
+			rfTheta = 0;
+			lfTheta = 0;
+			lWing = -3;
+			rWing = -1.5;
+			if (pTheta < 0) pTheta -= 25;
+			else pTheta += 25;
+		}
+
+		/* Left Turn Recovery */
+		else if (key == GLFW_KEY_Q && action == GLFW_RELEASE) {
+			faceTheta = 0;
+
+			pTheta = 0;
+			lfTheta = 0;
+			rfTheta = 0;
+			lWing = 0;
+			rWing = 0;
+		}
+
+		/* Grounded Right Turn */
+		else if (key == GLFW_KEY_E && action == GLFW_REPEAT) {
+			faceTheta = 0;
+
+			rfTheta = 0;
+			lfTheta = 0;
+			lWing = 1.5;
+			rWing = -3;
+			if (pTheta < 0) pTheta -= 25;
+			else pTheta += 25;
+		}
+
+		/* Right Turn Recovery */
+		else if (key == GLFW_KEY_E && action == GLFW_RELEASE) {
+			faceTheta = 0;
+
+			pTheta = 0;
+			lfTheta = 0;
+			rfTheta = 0;
+			lWing = 0;
+			rWing = 0;
+		}
+
+		/* Regular Jump */
+		else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+			faceTheta = 0;
+
+			pHeight = 1.75;
+			lfTheta = -.5;
+			rfTheta = -.5;
+			lWing = -4;
+			rWing = 4;
+		}
+
+		/* Spinning Jump */
+		else if (key == GLFW_KEY_SPACE && action == GLFW_REPEAT) {
+			faceTheta = 0;
+
+			pHeight = 2;
+			if (pTheta < 0) pTheta -= 25;
+			else pTheta += 25;
+		}
+
+		/* Landing */
+		else if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
+			faceTheta = 0;
+			pHeight = 0;
+			pTheta = 0;
+			lfTheta = 0;
+			rfTheta = 0;
+			lWing = 0;
+			rWing = 0;
+		}
+
+
+		else if (key == GLFW_KEY_UP) {	// forward
+			eye += speed * LA;
+		}
+		else if (key == GLFW_KEY_DOWN) {	// back
+			eye -= speed * LA;
+		}
+		else if (key == GLFW_KEY_LEFT) {	// left
+			eye -= normalize(cross(LA, up)) * speed;
+		}
+		else if (key == GLFW_KEY_RIGHT) {	// right
+			eye += normalize(cross(LA, up)) * speed;
+		}
+		/*} else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
+			gMat = (gMat+1)%4;
+		}*/ else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+			sTheta += 5;
+		} else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+			sTheta -= 5;
+		}	
 	}
-
-	/* Grounded Left Turn */
-	else if (key == GLFW_KEY_Q && action == GLFW_REPEAT) {
-		faceTheta = 0;
-
-		rfTheta = 0;
-		lfTheta = 0;
-		lWing = -3;
-		rWing = -1.5;
-		if (pTheta < 0) pTheta -= 25;
-		else pTheta += 25;
-	}
-
-	/* Left Turn Recovery */
-	else if (key == GLFW_KEY_Q && action == GLFW_RELEASE) {
-		faceTheta = 0;
-
-		pTheta = 0;
-		lfTheta = 0;
-		rfTheta = 0;
-		lWing = 0;
-		rWing = 0;
-	}
-
-	/* Grounded Right Turn */
-	else if (key == GLFW_KEY_E && action == GLFW_REPEAT) {
-		faceTheta = 0;
-
-		rfTheta = 0;
-		lfTheta = 0;
-		lWing = 1.5;
-		rWing = -3;
-		if (pTheta < 0) pTheta -= 25;
-		else pTheta += 25;
-	}
-
-	/* Right Turn Recovery */
-	else if (key == GLFW_KEY_E && action == GLFW_RELEASE) {
-		faceTheta = 0;
-
-		pTheta = 0;
-		lfTheta = 0;
-		rfTheta = 0;
-		lWing = 0;
-		rWing = 0;
-	}
-
-	/* Regular Jump */
-	else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-		faceTheta = 0;
-
-		pHeight = 1.75;
-		lfTheta = -.5;
-		rfTheta = -.5;
-		lWing = -4;
-		rWing = 4;
-	}
-
-	/* Spinning Jump */
-	else if (key == GLFW_KEY_SPACE && action == GLFW_REPEAT) {
-		faceTheta = 0;
-
-		pHeight = 2;
-		if (pTheta < 0) pTheta -= 25;
-		else pTheta += 25;
-	}
-
-	/* Landing */
-	else if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
-		faceTheta = 0;
-		pHeight = 0;
-		pTheta = 0;
-		lfTheta = 0;
-		rfTheta = 0;
-		lWing = 0;
-		rWing = 0;
-	}
-
-
-	else if (key == GLFW_KEY_UP) {	// forward
-		eye += speed * LA;
-	}
-	else if (key == GLFW_KEY_DOWN) {	// back
-		eye -= speed * LA;
-	}
-	else if (key == GLFW_KEY_LEFT) {	// left
-		eye -= normalize(cross(LA, up)) * speed;
-	}
-	else if (key == GLFW_KEY_RIGHT) {	// right
-		eye += normalize(cross(LA, up)) * speed;
-	}
-	/*} else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
-		gMat = (gMat+1)%4;
-	}*/ else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-		sTheta += 5;
-	} else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-		sTheta -= 5;
-	}	
 }
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -679,33 +682,25 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 	int width, height;
   	glfwGetFramebufferSize(window, &width, &height);
 
-	/*if (firstPass == TRUE) {
-		deltax = 0;
-		deltay = 0;
-	}
-	else {
-		deltax = xpos - oldx;
+  	if (restrict) return;
+  	else {
+  		deltax = xpos - oldx;
 		deltay = ypos - oldy;
-	}*/
+		/*theta += deltax * 3.14159265359 / height;
+		phi += deltay * 3.14159265359 / width;*/
+		theta += deltax * .001;
+		phi += deltay * .001;
 
-	deltax = xpos - oldx;
-	deltay = ypos - oldy;
-	/*theta += deltax * 3.14159265359 / height;
-	phi += deltay * 3.14159265359 / width;*/
-	theta += deltax * .001;
-	phi += deltay * .001;
+		if (phi >= glm::radians(80.0)) {
+			phi = glm::radians(80.0);
+		}
+		if (phi <= glm::radians(-80.0)) {
+			phi = glm::radians(-80.0);
+		}
 
-	if (phi >= glm::radians(80.0)) {
-		phi = glm::radians(80.0);
-	}
-	if (phi <= glm::radians(-80.0)) {
-		phi = glm::radians(-80.0);
-	}
-
-	oldx = xpos;
-	oldy = ypos;
-
-	/*if (firstPass) firstPass = FALSE;*/
+		oldx = xpos;
+		oldy = ypos;
+  	}
 
 	/*LA = normalize(vec3((cos(glm::radians(phi)) * cos(glm::radians(theta))),
 		  (sin(glm::radians(phi))),
@@ -823,6 +818,7 @@ int main(int argc, char **argv)
 	while(!glfwWindowShouldClose(window)) {
 		// Render scene.
 		render();
+
 		// Swap front and back buffers.
 		glfwSwapBuffers(window);
 		// Poll for and process events.
