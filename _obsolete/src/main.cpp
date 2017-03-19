@@ -28,12 +28,15 @@ using namespace glm;
 
 GLFWwindow *window; // Main application window
 string RESOURCE_DIR = ""; // Where the resources are loaded from
-shared_ptr<Program> prog, tex_prog;
+shared_ptr<Program> prog, tex_prog, prog0;
+
+shared_ptr<Texture> texture0;
 
 shared_ptr<Shape> shape;
 shared_ptr<Shape> cube;
 shared_ptr<Shape> bunny;
 shared_ptr<Shape> tree;
+shared_ptr<Shape> dog;
 
 double randPos[40];
 
@@ -46,8 +49,15 @@ int firstPass;
 float Lx = 50, Ly = 50, Lz = 30;
 
 double oldx, oldy;
-double phi, theta;
-vec3 eye, LA, up;
+/*double phi, theta;*/
+/*vec3 eye, LA, up;*/
+/*vec3 LA;*/
+
+double phi = 0;
+double theta = -3.14 / 2;
+vec3 LA = vec3(0, 0, -15);
+vec3 eye = vec3(0, 0, 0);
+vec3 up = vec3(0, 1, 0);
 
 double xMove, zMove, lWing, rWing;
 
@@ -132,14 +142,6 @@ static void initGL()
   	int width, height;
   	glfwGetFramebufferSize(window, &width, &height);
 
-  	oldx = 0;
-	oldy = 0;
-	phi = 0;
-	theta = 0;
-	LA = vec3(0, 0, -15);
-	eye = vec3(0, 0, 0);
-	up = vec3(0, 1, 0);
-
 	sTheta = 0;
 	pTheta = 0;
 	rfTheta = 0;
@@ -207,14 +209,6 @@ static void initGL()
   	glBindRenderbuffer(GL_RENDERBUFFER, depthBuf);
   	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
   	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuf);
-  	
-	//more FBO set up
-//	GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-//  	glDrawBuffers(1, DrawBuffers);
-
-	//create another FBO so we can swap back and forth
-//	createFBO(frameBuf[1], texBuf[1]);
-	//this one doesn't need depth
 
 	//set up the shaders to blur the FBO decomposed just a placeholder pass thru now
 	//TODO - modify and possibly add other shaders to complete blur
@@ -225,6 +219,28 @@ static void initGL()
 	tex_prog->addUniform("texBuf");
 	tex_prog->addAttribute("vertPos");
 
+	dog = make_shared<Shape>();
+   	dog->loadMesh(RESOURCE_DIR + "dog.obj");
+   	dog->resize();
+   	dog->init();
+
+	prog0 = make_shared<Program>();
+	prog0->setVerbose(true);
+	prog0->setShaderNames(RESOURCE_DIR + "tex_vert.glsl", RESOURCE_DIR + "tex_frag0.glsl");
+	prog0->init();
+
+	texture0 = make_shared<Texture>();
+   	texture0->setFilename(RESOURCE_DIR + "fur.jpg");
+   	texture0->init();
+   	texture0->setUnit(0);
+   	texture0->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+   	prog0->addUniform("P2");
+	prog0->addUniform("MV");
+	prog0->addAttribute("vertPos");
+   	prog0->addAttribute("vertNor");
+	prog0->addAttribute("vertTex");
+   	prog0->addUniform("Texture0");
 }
 
 /* To call the blur on the specificed texture */
@@ -253,8 +269,6 @@ static void render()
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 	
-	//set up to render to buffer
-//	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[0]);
 	// Clear framebuffer.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -265,6 +279,7 @@ static void render()
    	// Create the matrix stacks - please leave these alone for now
    	auto P = make_shared<MatrixStack>();
    	auto M = make_shared<MatrixStack>();
+   	auto V = make_shared<MatrixStack>();
    	// Apply perspective projection.
    	P->pushMatrix();
    	/*P->perspective(45.0f, aspect, 0.01f, 100.0f);*/
@@ -286,24 +301,14 @@ static void render()
 		  (cos(glm::radians(phi)) * sin(glm::radians(theta))));
 	}
 */
-	glm::mat4 V = lookAt(eye, eye + LA, up);
-	glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE,value_ptr(V));
+	LA = vec3((cos((phi)) * cos((theta))),
+		  (sin((phi))),
+		  (cos((phi)) * cos(3.14 / 2 - (theta))));
 
-	//globl transforms for 'camera'
-	/*M->pushMatrix();
-		M->translate(vec3(0, 0, -5));
-		SetMaterial(0);
-  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
-  	  	bunny->draw(prog);
-	M->popMatrix();
-
-	M->pushMatrix();
-		M->translate(vec3(5, 0, 0));
-		SetMaterial(1);
-  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
-  	  	bunny->draw(prog);
-	M->popMatrix();*/
-
+	V->pushMatrix();
+	V->lookAt(eye, eye + LA, up);
+	/*glm::mat4 V = lookAt(vec3(0,0,0), LA, up);*/
+	glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE,value_ptr(V->topMatrix()));
 
 	/* Draw Trees */
 	M->pushMatrix();
@@ -315,6 +320,13 @@ static void render()
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		}
+	M->popMatrix();
+
+	M->pushMatrix();
+		M->translate(vec3(0, 0, 5));
+	  	SetMaterial(4);
+  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+  	  	bunny->draw(prog);
 	M->popMatrix();
 
 	/* Draw Skater */
@@ -420,6 +432,24 @@ static void render()
 
 	prog->unbind();
 
+	auto MV = make_shared<MatrixStack>();
+	auto P2 = make_shared<MatrixStack>();
+	//draw the dog mesh 	
+	prog0->bind();
+   	texture0->bind(prog0->getUniform("Texture0"));
+	glUniformMatrix4fv(prog0->getUniform("P2"), 1, GL_FALSE, value_ptr(P->topMatrix()));
+
+	MV->pushMatrix();
+		MV->loadIdentity();	
+		MV->pushMatrix();
+		    MV->translate(vec3(0, 0.5, 0));
+		    MV->scale(vec3(1, 1, 1));	
+			glUniformMatrix4fv(prog0->getUniform("MV"), 1, GL_FALSE, value_ptr(MV->topMatrix()));
+		   	dog->draw(prog0);
+		MV->popMatrix();
+	MV->popMatrix();
+	prog0->unbind();
+
 	if (xExpand < 1.04 && deflate == FALSE) {
 		xExpand += .0009;
 	}
@@ -439,6 +469,7 @@ static void error_callback(int error, const char *description)
 	cerr << description << endl;
 }
 
+
 /* key callback */
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
@@ -457,7 +488,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 		if (pTheta > -32) pTheta -= 8;
 
 		/* Control Right Wing */
-		if (rWing < 0 && rWingOut == TRUE) rWing += .2; // Return to first from Low
+		if (rWing < 0 && rWingOut == TRUE) rWing += .4; // Return to first from Low
 		else {
 			rWingOut = FALSE;				// Advance to High
 			if (rWing > -1.75) {
@@ -613,7 +644,6 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 	/* Landing */
 	else if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
 		faceTheta = 0;
-
 		pHeight = 0;
 		pTheta = 0;
 		lfTheta = 0;
@@ -646,32 +676,40 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
 	double deltax, deltay;
+	int width, height;
+  	glfwGetFramebufferSize(window, &width, &height);
 
-	if (firstPass == TRUE) {
+	/*if (firstPass == TRUE) {
 		deltax = 0;
 		deltay = 0;
 	}
 	else {
 		deltax = xpos - oldx;
 		deltay = ypos - oldy;
-	}
+	}*/
 
-	theta += deltax * 3.14159265359 / g_width;
-	phi += deltay * 3.14159265359 / g_height;
+	deltax = xpos - oldx;
+	deltay = ypos - oldy;
+	/*theta += deltax * 3.14159265359 / height;
+	phi += deltay * 3.14159265359 / width;*/
+	theta += deltax * .001;
+	phi += deltay * .001;
 
-	if (phi >= 80) {
-		phi = 80;
+	if (phi >= glm::radians(80.0)) {
+		phi = glm::radians(80.0);
 	}
-	if (phi <= -80) {
-		phi = -80;
+	if (phi <= glm::radians(-80.0)) {
+		phi = glm::radians(-80.0);
 	}
 
 	oldx = xpos;
 	oldy = ypos;
 
-	LA = normalize(vec3((cos(glm::radians(phi)) * cos(glm::radians(theta))),
+	/*if (firstPass) firstPass = FALSE;*/
+
+	/*LA = normalize(vec3((cos(glm::radians(phi)) * cos(glm::radians(theta))),
 		  (sin(glm::radians(phi))),
-		  (cos(glm::radians(phi)) * sin(glm::radians(theta)))));
+		  (cos(glm::radians(phi)) * sin(glm::radians(theta)))));*/
 }
 
 /* resize window call back */
@@ -770,10 +808,10 @@ int main(int argc, char **argv)
 	// Initialize scene. Note geometry initialized in init now
    	for (int i = 0; i < 20; i++) {
    		randPos[i * 3 + 0] = rand() % (10 - 10 + 1) + 10;	// randX
-	 	randPos[i * 3 + 1] = rand() % (-6 + 7 + 1) - 7;	// randZ
+	 	randPos[i * 3 + 1] = rand() % (-6 + 7 + 1) - 7;		// randZ
 	 }
 
-	 firstPass = FALSE;
+	 firstPass = TRUE;
 	 xExpand = 1;
 	 yExpand = 1;
 	 deflate = FALSE;
