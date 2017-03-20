@@ -41,8 +41,9 @@ shared_ptr<Shape> dog;
 double randPos[40];
 
 int restrict = TRUE;
+int introCount = 0;
 
-int g_width = 512;
+int g_width = 600;
 int g_height = 512;
 float sTheta;
 int gMat = 1;
@@ -61,7 +62,9 @@ vec3 LA = vec3(0, 0, -15);
 vec3 eye = vec3(0, 0, 0);
 vec3 up = vec3(0, 1, 0);
 
-double xMove, zMove, lWing, rWing;
+double xMove, zMove;
+double lWing, lWingy, lWingx;
+double rWing, rWingy, rWingx;
 
 float pTheta;	// Rotates entire penguin 
 float rfTheta; 	// Rotates penguin's right foot
@@ -145,15 +148,19 @@ static void initGL()
   	glfwGetFramebufferSize(window, &width, &height);
 
 	sTheta = 0;
-	pTheta = 0;
+	pTheta = 90;
 	rfTheta = 0;
 	lfTheta = 0;
 	faceTheta = 0;
 
-	xMove = 0;
-	zMove = -15;
+	xMove = -25;
+	zMove = -40;
 	lWing = .1;
+	lWingy = 0;
+	lWingx = 0;
 	rWing = -.1;
+	rWingy = 0;
+	rWingx = 0;
 
 	pHeight = 0;
 	// Set background color.
@@ -363,9 +370,11 @@ static void render()
 		  	  	shape->draw(prog);
 			M->popMatrix();
 
-			/* Left Wing */
+			/* Right Wing */
 			M->pushMatrix();
 				M->translate(vec3(-.9, .2, 0));
+				M->rotate(rWingx, vec3(1, 0, 0));
+				M->rotate(rWingy, vec3(0, 1, 0));
 				M->rotate(rWing, vec3(0, 0, 1));
 				M->translate(vec3(0, -.7, 0));
 				M->scale(vec3(.18, .9, .5));
@@ -374,9 +383,11 @@ static void render()
 		  	  	shape->draw(prog);
 			M->popMatrix();
 
-			/* Right Wing */
+			/* Left Wing */
 			M->pushMatrix();
 				M->translate(vec3(.9, .2, 0));
+				M->rotate(lWingx, vec3(1, 0, 0));
+				M->rotate(lWingy, vec3(0, 1, 0));
 				M->rotate(lWing, vec3(0, 0, 1));
 				M->translate(vec3(0, -.7, 0));
 				M->scale(vec3(.18, .9, .5));
@@ -385,7 +396,7 @@ static void render()
 		  	  	shape->draw(prog);
 			M->popMatrix();
 
-			/* Left Foot */
+			/* Right Foot */
 			M->pushMatrix();
 				M->rotate(-rfTheta, vec3(1, 0, 0));
 				M->rotate(-.15, vec3(0, .8, 0));
@@ -396,7 +407,7 @@ static void render()
 		  	  	cube->draw(prog);
 			M->popMatrix();
 
-			/* Right Foot */
+			/* Left Foot */
 			M->pushMatrix();
 				M->rotate(-lfTheta, vec3(1, 0, 0));
 				M->rotate(.15, vec3(0, 1, 0));
@@ -445,6 +456,7 @@ static void render()
 	MV->popMatrix();
 	prog0->unbind();*/
 
+	// Breathing 
 	if (xExpand < 1.04 && deflate == FALSE) {
 		xExpand += .0009;
 	}
@@ -454,6 +466,208 @@ static void render()
 		if (xExpand == 1) {
 			deflate = FALSE;
 		}
+	}
+
+	/////////////////////////////////////////////////////////
+	//////////// Begin Intro Animation Sequence ////////////
+	/////////////////////////////////////////////////////////
+	if (restrict) {
+		// 1. Enter
+		if (introCount == 0) {
+			xMove += .15; 
+			if (xMove > -10) {
+				xMove = -10;
+				introCount++;
+			}
+			if (rWingx > -.75) {
+				rWingx -= .01;
+				rWing += .003;
+			}
+			if (lWingx > -.75) {
+				lWingx -= .01;
+				lWing -= .003;
+			}
+			/*if (rWing > -.75) {
+				rWing -= .01;
+			}*/
+		}
+
+		// 2. Present
+		else if (introCount == 1) {
+			zMove += .15;
+			if (pTheta > 0) pTheta -= 3;
+			if (zMove > -25) {
+				zMove = -25;
+				introCount++;
+			}
+			if (rWingy > -3.75) {
+				rWingy -= .05;
+			}
+			if (lWingy < 3.75) {
+				lWingy += .05;
+			}
+		}
+
+		// 3. Glide stage left
+		else if (introCount == 2) {
+			if (pTheta < 90) pTheta += 3;
+			if (xMove < 6) xMove += .1;
+			if (xMove > 6) {
+				xMove = 6;
+				introCount++;
+			}
+			if (rWingy < 0) rWingy += .1;
+			if (rWingx < 0) rWingx += .1;
+			if (rWing > -.1) rWing -= .1;	// Re-init right wing
+
+			if (lWingy > 0) lWingy -= .5;
+			if (lWingx < 0) lWingx += .5;
+			if (lWing < 3) lWing += .1;	// Raise left wing
+		}
+
+		// 4. Glide stage right
+		else if (introCount == 3) {
+			if (pTheta > -90) pTheta -= 8;
+			if (xMove > -8) xMove -= .1;
+			if (xMove < -8) {
+				xMove = -8;
+				introCount++;
+			}
+			if (rWing > -3) rWing -= .1;	// Raise right wing
+			if (lWing > .1) lWing -= .2;
+		}
+
+		// 5. Grounded Outward Spin
+		else if (introCount == 4) {
+			pTheta -= 10;
+			if (pTheta <= -990 && introCount == 4) {
+				pTheta = 90;
+				introCount++;
+			}
+			if (rWing > -3.5) rWing -= .05;
+			if (lWing < 3.5) lWing += .15;
+		}
+		 
+		// 6. Prep stage left & take off
+		else if (introCount == 5) {
+			if (xMove < -2) xMove += .1;
+			if (pTheta > 32) pTheta -= 8;
+			if (xMove > -2) {
+				xMove += .5;
+				pHeight -= .25;
+				introCount++;
+			}
+			if (rWing < -.75) rWing += .1;
+			if (lWing > 2) lWing -= .1;
+		}
+
+		// 7. Rise 
+		else if (introCount == 6) {
+			if (pHeight < 1.75) {
+				pHeight += .1;
+				xMove += .02;
+				/*introCount++;*/
+			}
+			else {
+				pHeight = 1.75;
+				introCount++;
+			}
+			if (rWing > -1.75) rWing -= .1;
+		}
+
+		// 8. Come down
+		else if (introCount == 7) {
+			if (pHeight > 0) {
+				pHeight -= .1;
+				xMove += .02;
+			}
+			else {
+				pHeight = 0;
+				introCount++;
+			}
+			if (rWing < -.5) rWing += .05;
+			if (lWing > .5) lWing -= .05;
+		}
+		
+
+		// 9. Land, prep again stage left, take off
+		else if (introCount == 8) {
+			/*if (pTheta < 90) pTheta += 3;*/
+			if (xMove < 2) xMove += .1;
+			if (xMove > 2) {
+				xMove = 2;
+				pHeight -= .25;
+				introCount++;
+			}
+			if (rWing < -.5) rWing += .05;	// Lower arms
+			if (lWing > .5) lWing -= .05;
+		}
+
+		// 10. Rise & spin
+		else if (introCount == 9) {
+			if (pHeight < 1.75) {
+				pHeight += .1;
+				xMove += .02;
+				/*introCount++;*/
+			}
+			else {
+				pHeight = 1.75; 
+				pTheta -= 10;
+				if (pTheta <= -360) {
+					pTheta = 0;
+					introCount++;
+				}
+			}
+			if (rWing > -2) rWing -= .1;
+			if (lWing < 2) lWing += .1;
+		}
+
+		// 11. Come down
+		else if (introCount == 10) {
+			if (pHeight > 0) {
+				pHeight -= .1;
+				xMove += .02;
+			}
+			else {
+				pHeight = 0;
+				introCount++;
+			}
+			if (rWing < 0) rWing += .1;
+			if (lWing > 0) lWing -= .1;
+		}
+
+		// 12. Take center
+		else if (introCount == 11) {
+			if (xMove > 0) xMove -= .1;
+			if (zMove < -15) zMove += .08;
+			if (xMove <= 0 && zMove >= -15) {
+				faceTheta = 0;
+
+				lWing = .1;
+				lWingy = 0;
+				lWingx = 0;
+				rWing = -.1;
+				rWingy = 0;
+				rWingx = 0;
+
+				pHeight = 0;
+				restrict = FALSE;
+			}
+			if (rWingx > -3) {	// Raise arms
+				rWingx -= .075;
+			}
+			if (lWingx > -3) {
+				lWingx -= .075;
+			}
+			if (rWingx <= -3 && lWingx <= -3) {
+				if (rWing > -3) rWing -= .1;	// Lower arms
+				if (lWing < 3) lWing += .1;
+
+				/*if (rWing >= -.1) rWing = -.1;
+				if (lWing <= .1) lWing = .1;*/
+			}
+		}
+		/*restrict = FALSE;*/
 	}
 
 }
@@ -473,6 +687,10 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 	if (restrict) {
 		if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+			restrict = FALSE;
+		}
+
+		else if(key == GLFW_KEY_ESCAPE && action == GLFW_REPEAT) {
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 	}
@@ -481,7 +699,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 
-		/* Move Left */
+		/* Move Right */
 		else if (key == GLFW_KEY_A) {
 			xMove -= .2;
 			faceTheta = 0;
@@ -513,7 +731,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 			if (rfTheta < 0) rfTheta += .25;	// Lower Left Foot
 		}
 
-		/* Move Right */
+		/* Move Left */
 		else if (key == GLFW_KEY_D) {
 			xMove += .2;
 			faceTheta = 0;
