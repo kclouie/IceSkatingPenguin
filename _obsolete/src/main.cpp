@@ -38,10 +38,14 @@ shared_ptr<Shape> bunny;
 shared_ptr<Shape> tree;
 shared_ptr<Shape> dog;
 
-double randPos[40];
+double randPos[4] = {
+	-5, -35,
+	-5.001, -35
+};
 
 int restrict = TRUE;
 int introCount = 0;
+int stepCycle;
 
 int g_width = 600;
 int g_height = 512;
@@ -161,6 +165,8 @@ static void initGL()
 	rWing = -.1;
 	rWingy = 0;
 	rWingx = 0;
+
+	stepCycle = 0;
 
 	pHeight = 0;
 	// Set background color.
@@ -320,9 +326,9 @@ static void render()
 	glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE,value_ptr(V->topMatrix()));
 
 	/* Draw Trees */
-	M->pushMatrix();
+	/*M->pushMatrix();
 		M->loadIdentity();
-		for (int i = 0; i < 20; i++){
+		for (int i = 0; i < 1; i++){
 			M->translate(vec3(randPos[i * 3 + 0], 2, randPos[i * 3 + 1]));
 			M->scale(vec3(3, 3, 3));
 			SetMaterial(4);
@@ -330,7 +336,7 @@ static void render()
   			tree->draw(prog);
 		}
 	M->popMatrix();
-
+*/
 	/* Draw Skater */
    	M->pushMatrix();
     	M->loadIdentity();
@@ -426,6 +432,20 @@ static void render()
    		M->popMatrix();
    	M->popMatrix();
 
+   	/* Draw Trees */
+	M->pushMatrix();
+		M->loadIdentity();
+		for (int i = 0; i < 2; i++){
+			M->pushMatrix();
+				M->translate(vec3(randPos[i * 3 + 0], 1, randPos[i * 3 + 1]));
+				M->scale(vec3(3, 3, 3));
+				SetMaterial(4);
+	  			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+	  			tree->draw(prog);
+	  		M->popMatrix();
+		}
+	M->popMatrix();
+
    	M->pushMatrix();
    		M->translate(vec3(0, -2, 0));
 		M->scale(vec3(500, .1, 500));
@@ -475,7 +495,7 @@ static void render()
 		// 1. Enter
 		if (introCount == 0) {
 			xMove += .15; 
-			if (xMove > -10) {
+			if (xMove > -10) {	
 				xMove = -10;
 				introCount++;
 			}
@@ -487,9 +507,22 @@ static void render()
 				lWingx -= .01;
 				lWing -= .003;
 			}
-			/*if (rWing > -.75) {
-				rWing -= .01;
-			}*/
+			if (stepCycle % 2 == 0) {
+				if (lfTheta > -1) lfTheta -= .03;	// Step Right
+				if (rfTheta < 0) rfTheta += .1;
+				if (lfTheta <= -1) {
+					lfTheta = -1;
+					stepCycle++;
+				}
+			}
+			if (stepCycle % 2 != 0) {
+				if (rfTheta > -1) rfTheta -= .03;	// Step Left
+				if (lfTheta < 0) lfTheta += .1;
+				if (rfTheta <= -1) {
+					rfTheta = -1;
+					stepCycle++;
+				}
+			}
 		}
 
 		// 2. Present
@@ -506,11 +539,28 @@ static void render()
 			if (lWingy < 3.75) {
 				lWingy += .05;
 			}
+
+			if (stepCycle % 2 == 0) {
+				if (lfTheta > -1) lfTheta -= .03;	// Step Right
+				if (rfTheta < 0) rfTheta += .1;
+				if (lfTheta <= -1) {
+					lfTheta = -1;
+					stepCycle++;
+				}
+			}
+			if (stepCycle % 2 != 0) {
+				if (rfTheta > -1) rfTheta -= .03;	// Step Left
+				if (lfTheta < 0) lfTheta += .1;
+				if (rfTheta <= -1) {
+					rfTheta = -1;
+					stepCycle++;
+				}
+			}
 		}
 
 		// 3. Glide stage left
 		else if (introCount == 2) {
-			if (pTheta < 90) pTheta += 3;
+			if (pTheta < 90) pTheta += 2;
 			if (xMove < 6) xMove += .1;
 			if (xMove > 6) {
 				xMove = 6;
@@ -523,6 +573,9 @@ static void render()
 			if (lWingy > 0) lWingy -= .5;
 			if (lWingx < 0) lWingx += .5;
 			if (lWing < 3) lWing += .1;	// Raise left wing
+
+			if (lfTheta < 0) lfTheta += .1;		// Lower Right Foot
+			if (rfTheta > -1) rfTheta -= .02;		// Lift Left Foot
 		}
 
 		// 4. Glide stage right
@@ -535,6 +588,9 @@ static void render()
 			}
 			if (rWing > -3) rWing -= .1;	// Raise right wing
 			if (lWing > .1) lWing -= .2;
+
+			if (lfTheta > -1) lfTheta -= .02;	// Lift Right Foot
+			if (rfTheta < 0) rfTheta += .1;	// Lower Left Foot
 		}
 
 		// 5. Grounded Outward Spin
@@ -546,6 +602,14 @@ static void render()
 			}
 			if (rWing > -3.5) rWing -= .05;
 			if (lWing < 3.5) lWing += .15;
+
+			/*if (rfTheta < 0) rfTheta += .2;	// Lower Left Foot
+			if (lfTheta < 0) lfTheta += .2;	// Lower Left Foot*/
+
+			if (lfTheta < 0) lfTheta += .2;
+			else lfTheta = 0;
+			rfTheta = 0;
+
 		}
 		 
 		// 6. Prep stage left & take off
@@ -559,6 +623,23 @@ static void render()
 			}
 			if (rWing < -.75) rWing += .1;
 			if (lWing > 2) lWing -= .1;
+
+			if (stepCycle % 2 == 0) {
+				if (lfTheta > -1) lfTheta -= .03;	// Step Right
+				if (rfTheta < 0) rfTheta += .1;
+				if (lfTheta <= -1) {
+					lfTheta = -1;
+					stepCycle++;
+				}
+			}
+			if (stepCycle % 2 != 0) {
+				if (rfTheta > -1) rfTheta -= .03;	// Step Left
+				if (lfTheta < 0) lfTheta += .1;
+				if (rfTheta <= -1) {
+					rfTheta = -1;
+					stepCycle++;
+				}
+			}
 		}
 
 		// 7. Rise 
@@ -573,6 +654,9 @@ static void render()
 				introCount++;
 			}
 			if (rWing > -1.75) rWing -= .1;
+
+			if (rfTheta < 0) rfTheta += .5;
+			if (lfTheta < 0) lfTheta += .5;
 		}
 
 		// 8. Come down
@@ -601,6 +685,23 @@ static void render()
 			}
 			if (rWing < -.5) rWing += .05;	// Lower arms
 			if (lWing > .5) lWing -= .05;
+
+			if (stepCycle % 2 == 0) {
+				if (lfTheta > -1) lfTheta -= .03;	// Step Right
+				if (rfTheta < 0) rfTheta += .1;
+				if (lfTheta <= -1) {
+					lfTheta = -1;
+					stepCycle++;
+				}
+			}
+			if (stepCycle % 2 != 0) {
+				if (rfTheta > -1) rfTheta -= .03;	// Step Left
+				if (lfTheta < 0) lfTheta += .1;
+				if (rfTheta <= -1) {
+					rfTheta = -1;
+					stepCycle++;
+				}
+			}
 		}
 
 		// 10. Rise & spin
@@ -618,8 +719,8 @@ static void render()
 					introCount++;
 				}
 			}
-			if (rWing > -2) rWing -= .1;
-			if (lWing < 2) lWing += .1;
+			if (rWing > -3) rWing -= .1;
+			if (lWing < 3) lWing += .1;
 		}
 
 		// 11. Come down
@@ -632,16 +733,18 @@ static void render()
 				pHeight = 0;
 				introCount++;
 			}
-			if (rWing < 0) rWing += .1;
-			if (lWing > 0) lWing -= .1;
+			if (rWing < 0) rWing += .15;
+			if (lWing > 0) lWing -= .15;
 		}
 
 		// 12. Take center
 		else if (introCount == 11) {
 			if (xMove > 0) xMove -= .1;
-			if (zMove < -15) zMove += .08;
+			if (zMove < -15) zMove += .06;
+
+
 			if (xMove <= 0 && zMove >= -15) {
-				faceTheta = 0;
+				faceTheta = 0;	// END!
 
 				lWing = .1;
 				lWingy = 0;
@@ -650,25 +753,43 @@ static void render()
 				rWingy = 0;
 				rWingx = 0;
 
+				lfTheta = 0;
+				rfTheta = 0;
+
 				pHeight = 0;
 				restrict = FALSE;
 			}
+
+
 			if (rWingx > -3) {	// Raise arms
-				rWingx -= .075;
+				rWingx -= .03;
 			}
 			if (lWingx > -3) {
-				lWingx -= .075;
+				lWingx -= .03;
 			}
 			if (rWingx <= -3 && lWingx <= -3) {
-				if (rWing > -3) rWing -= .1;	// Lower arms
-				if (lWing < 3) lWing += .1;
+				if (rWing > -3) rWing -= .08;	// Lower arms
+				if (lWing < 3) lWing += .08;
+			}
 
-				/*if (rWing >= -.1) rWing = -.1;
-				if (lWing <= .1) lWing = .1;*/
+			if (stepCycle % 2 == 0) {
+				if (lfTheta > -1) lfTheta -= .03;	// Step Right
+				if (rfTheta < 0) rfTheta += .1;
+				if (lfTheta <= -1) {
+					lfTheta = -1;
+					stepCycle++;
+				}
+			}
+			if (stepCycle % 2 != 0) {
+				if (rfTheta > -1) rfTheta -= .03;	// Step Left
+				if (lfTheta < 0) lfTheta += .1;
+				if (rfTheta <= -1) {
+					rfTheta = -1;
+					stepCycle++;
+				}
 			}
 		}
-		/*restrict = FALSE;*/
-	}
+	}	// End restrict
 
 }
 
@@ -705,7 +826,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 			faceTheta = 0;
 
 			/* Rotate penguin slight left */
-			if (pTheta > -32) pTheta -= 8;
+			if (pTheta > -45) pTheta -= 8;
 
 			/* Control Right Wing */
 			if (rWing < 0 && rWingOut == TRUE) rWing += .4; // Return to first from Low
@@ -737,7 +858,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 			faceTheta = 0;
 
 			/* Rotate penguin slight right*/
-			if (pTheta < 32) pTheta += 8;
+			if (pTheta < 45) pTheta += 8;
 
 			/* Control Right Wing */
 			if (rWing < 0 && rWingIn == TRUE) rWing += .4;	// Return to first from High
@@ -766,7 +887,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 		/* Skate backwards */
 		else if (key == GLFW_KEY_W) {
-			zMove -= .2;
+			zMove -= .4;
 			if (faceTheta < 32) faceTheta += 8;
 			if (pTheta < 0) pTheta += 8;
 			else if (pTheta > 0) pTheta -= 8;
@@ -781,7 +902,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 		/* Skate forward */
 		else if (key == GLFW_KEY_S) {
-			zMove += .2;
+			zMove += .4;
 			faceTheta = 0;
 
 			if (pTheta < 0) pTheta += 8;
@@ -1019,10 +1140,10 @@ int main(int argc, char **argv)
    	glfwSetFramebufferSizeCallback(window, resize_callback);
 
 	// Initialize scene. Note geometry initialized in init now
-   	for (int i = 0; i < 20; i++) {
+   	/*for (int i = 0; i < 20; i++) {
    		randPos[i * 3 + 0] = rand() % (10 - 10 + 1) + 10;	// randX
 	 	randPos[i * 3 + 1] = rand() % (-6 + 7 + 1) - 7;		// randZ
-	 }
+	 }*/
 
 	 firstPass = TRUE;
 	 xExpand = 1;
