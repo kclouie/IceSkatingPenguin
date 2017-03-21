@@ -274,6 +274,33 @@ src/MatrixStack.cpp.s:
 	$(MAKE) -f CMakeFiles/fbo.dir/build.make CMakeFiles/fbo.dir/src/MatrixStack.cpp.s
 .PHONY : src/MatrixStack.cpp.s
 
+src/Particle.o: src/Particle.cpp.o
+
+.PHONY : src/Particle.o
+
+# target to build an object file
+src/Particle.cpp.o:
+	$(MAKE) -f CMakeFiles/fbo.dir/build.make CMakeFiles/fbo.dir/src/Particle.cpp.o
+.PHONY : src/Particle.cpp.o
+
+src/Particle.i: src/Particle.cpp.i
+
+.PHONY : src/Particle.i
+
+# target to preprocess a source file
+src/Particle.cpp.i:
+	$(MAKE) -f CMakeFiles/fbo.dir/build.make CMakeFiles/fbo.dir/src/Particle.cpp.i
+.PHONY : src/Particle.cpp.i
+
+src/Particle.s: src/Particle.cpp.s
+
+.PHONY : src/Particle.s
+
+# target to generate assembly for a file
+src/Particle.cpp.s:
+	$(MAKE) -f CMakeFiles/fbo.dir/build.make CMakeFiles/fbo.dir/src/Particle.cpp.s
+.PHONY : src/Particle.cpp.s
+
 src/Program.o: src/Program.cpp.o
 
 .PHONY : src/Program.o
@@ -406,6 +433,9 @@ help:
 	@echo "... src/MatrixStack.o"
 	@echo "... src/MatrixStack.i"
 	@echo "... src/MatrixStack.s"
+	@echo "... src/Particle.o"
+	@echo "... src/Particle.i"
+	@echo "... src/Particle.s"
 	@echo "... src/Program.o"
 	@echo "... src/Program.i"
 	@echo "... src/Program.s"

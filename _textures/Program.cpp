@@ -4,8 +4,6 @@
 #include <cassert>
 
 #include "GLSL.h"
-#include "Texture.h"
-
 
 using namespace std;
 
@@ -87,16 +85,10 @@ bool Program::init()
 void Program::bind()
 {
 	glUseProgram(pid);
-   for(map<string,Texture*>::iterator it = textures.begin(); it != textures.end(); ++it) {
-      it->second->bind();
-   }
 }
 
 void Program::unbind()
 {
-   for(map<string,Texture*>::iterator it = textures.begin(); it != textures.end(); ++it) {
-      it->second->unbind();
-   }
 	glUseProgram(0);
 }
 
@@ -109,16 +101,6 @@ void Program::addUniform(const string &name)
 {
 	uniforms[name] = GLSL::getUniformLocation(pid, name.c_str(), isVerbose());
 }
-
-void Program::addTexture(Texture *texture)
-{
-   const string &name = texture->getName();
-   GLint handle = GLSL::getUniformLocation(pid, name.c_str());
-   texture->setHandle(handle);
-   textures[name] = texture;
-}
-
-
 
 GLint Program::getAttribute(const string &name) const
 {
@@ -143,14 +125,3 @@ GLint Program::getUniform(const string &name) const
 	}
 	return uniform->second;
 }
-
-Texture *Program::getTexture(const string &name) const
-{
-   map<string,Texture*>::const_iterator texture = textures.find(name.c_str());
-   if(texture == textures.end()) {
-      cout << name << " is not a texture" << endl;
-      return 0;
-   }
-   return texture->second;
-}
-

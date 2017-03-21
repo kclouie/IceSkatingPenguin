@@ -6,6 +6,7 @@ Look for "TODO" in this file and write new shaders
 */
 
 #include <iostream>
+#include <algorithm>
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -15,6 +16,8 @@ Look for "TODO" in this file and write new shaders
 #include "MatrixStack.h"
 #include "Shape.h"
 #include "GLTextureWriter.h"
+#include "Texture.h"
+#include "Particle.h"
 
 #define TRUE 1	
 #define FALSE 0
@@ -28,7 +31,9 @@ using namespace glm;
 
 GLFWwindow *window; // Main application window
 string RESOURCE_DIR = ""; // Where the resources are loaded from
-shared_ptr<Program> prog, prog0;
+shared_ptr<Program> prog, prog0, prog_s;
+
+vector<shared_ptr<Particle>> particles;
 
 shared_ptr<Texture> texture0;
 
@@ -36,11 +41,16 @@ shared_ptr<Shape> shape;
 shared_ptr<Shape> cube;
 shared_ptr<Shape> bunny;
 shared_ptr<Shape> tree;
-shared_ptr<Shape> dog;
+shared_ptr<Shape> cube2;
 
 int restrict = TRUE;
+int escCount = 0;
 int introCount = 0;
 int stepCycle;
+
+int close = FALSE;
+float s2ix = 10;		// s2ix <== Secondary Skater initial position x
+float s2iz = 0;
 
 int g_width = 600;
 int g_height = 512;
@@ -73,6 +83,33 @@ int lWingIn = FALSE, lWingOut = FALSE;
 int rWingIn = FALSE, rWingOut = FALSE;
 
 float pHeight;	// Raise penguin
+
+///////////// SNOW GLOBALS /////////////
+int snowFall = FALSE;
+int snowToss = FALSE;
+
+float snowThrow = 0;
+
+int numP = 300;
+static GLfloat points[500000];
+static GLfloat pointColors[1200];
+GLuint pointsbuffer;
+GLuint colorbuffer;
+
+GLuint VertexArrayID;
+
+Texture texture;
+GLint h_texture0;
+
+float t0_disp = 0.0f;
+float t_disp = 0.0f;
+
+bool keyToggles[256] = {false};
+float t = 0.0f; //reset in init
+float h = 0.0f;
+vec3 g(0.0f, -0.1f, 0.0f);
+
+float camRot;
 
 //forward declaring a useful function listed later
 void SetMaterial(int i);
@@ -107,9 +144,12 @@ static void initGL()
 
 	pHeight = 0;
 	// Set background color.
-	glClearColor(.12f, .34f, .56f, 1.0f);
+	glClearColor(.6f, .8f, 1.0f, 1.0f);
 	// Enable z-buffer test.
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+  	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   	glPointSize(14.0f);
 
 	// Initialize the obj mesh VBOs etc
 	bunny = make_shared<Shape>();
@@ -122,10 +162,10 @@ static void initGL()
 	cube->resize();
 	cube->init();
 
-	dog = make_shared<Shape>();
-   	dog->loadMesh(RESOURCE_DIR + "cube2.obj");
-   	dog->resize();
-   	dog->init();
+	cube2 = make_shared<Shape>();
+   	cube2->loadMesh(RESOURCE_DIR + "cube2.obj");
+   	cube2->resize();
+   	cube2->init();
 
    	shape = make_shared<Shape>();
 	shape->loadMesh(RESOURCE_DIR + "penguinsphere.obj");
@@ -171,6 +211,117 @@ static void initGL()
    	prog0->addAttribute("vertNor");
 	prog0->addAttribute("vertTex");
    	prog0->addUniform("Texture0");
+
+   	///////////// SNOW GLOBALS /////////////
+   	t = 0.0f;
+    h = 0.01f;
+    g = vec3(0.0f, -0.01f, 0.0f);
+
+    // Intialize textures
+    texture.setFilename(RESOURCE_DIR+"alpha.bmp");
+    texture.setUnit(0);
+   	texture.setName("alphaTexture");
+   	texture.init();
+
+   	// Initialize snow program.
+   	prog_s = make_shared<Program>();
+	prog_s->setVerbose(true);
+	prog_s->setShaderNames(RESOURCE_DIR + "lab10_vert.glsl", RESOURCE_DIR + "lab10_frag.glsl");
+	prog_s->init();
+	prog_s->addUniform("P");
+	prog_s->addUniform("M");
+	prog_s->addUniform("V");
+	prog_s->addAttribute("vertPos");
+	prog_s->addAttribute("Pcolor");
+	prog_s->addTexture(&texture);
+
+	// set up particles 
+	int n = numP;
+   	for(int i = 0; i < n; ++i) {
+      auto particle = make_shared<Particle>(); 
+      particles.push_back(particle);
+      particle->load();
+   	}
+
+   	glGenVertexArrays(1, &VertexArrayID);
+   	glBindVertexArray(VertexArrayID);
+
+   	//generate vertex buffer to hand off to OGL - using instancing
+   	glGenBuffers(1, &pointsbuffer);
+   	//set the current state to focus on our vertex buffer
+   	glBindBuffer(GL_ARRAY_BUFFER, pointsbuffer);
+   	//actually memcopy the data - only do this once
+   	glBufferData(GL_ARRAY_BUFFER, sizeof(points), NULL, GL_STREAM_DRAW);
+   
+	glGenBuffers(1, &colorbuffer);
+   	//set the current state to focus on our vertex buffer
+   	glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+   	//actually memcopy the data - only do this once
+   	glBufferData(GL_ARRAY_BUFFER, sizeof(pointColors), NULL, GL_STREAM_DRAW);
+
+	assert(glGetError() == GL_NO_ERROR);
+}
+
+//Note you could add scale later for each particle - not implemented
+void updateGeom() {
+	vec3 pos;
+	vec4 col;
+
+	//go through all the particles and update the CPU buffer
+   	for (int i = 0; i < numP; i++) {
+		pos = particles[i]->getPosition();
+		col = particles[i]->getColor();
+		points[i*3+0] =pos.x; 
+		points[i*3+1] =pos.y; 
+		points[i*3+2] =pos.z; 
+		pointColors[i*4+0] =col.r + col.a/10; 
+		pointColors[i*4+1] =col.g + col.g/10; 
+		pointColors[i*4+2] =col.b + col.b/10;
+		pointColors[i*4+3] =col.a;
+	} 
+
+	//update the GPU data
+	glBindBuffer(GL_ARRAY_BUFFER, pointsbuffer);
+   	glBufferData(GL_ARRAY_BUFFER, sizeof(points), NULL, GL_STREAM_DRAW);
+   	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float)*numP*3, points);
+	glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+   	glBufferData(GL_ARRAY_BUFFER, sizeof(pointColors), NULL, GL_STREAM_DRAW);
+   	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float)*numP*4, pointColors);
+   	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+// Sort particles by their z values in camera space
+class ParticleSorter {
+public:
+   bool operator()(const shared_ptr<Particle> p0, const shared_ptr<Particle> p1) const
+   {
+      // Particle positions in world space
+      const vec3 &x0 = p0->getPosition();
+      const vec3 &x1 = p1->getPosition();
+      // Particle positions in camera space
+      vec4 x0w = C * vec4(x0.x, x0.y, x0.z, 1.0f);
+      vec4 x1w = C * vec4(x1.x, x1.y, x1.z, 1.0f);
+      return x0w.z < x1w.z;
+   }
+  
+   mat4 C; // current camera matrix
+};
+ParticleSorter sorter;
+
+/* note for first update all particles should be "reborn" 
+   which will initialize their positions */
+void updateParticles() {
+
+  //update the particles
+  for(auto particle : particles) {
+  	particle->update(t, h, g, keyToggles);
+  }
+  t += h;
+
+  auto temp = make_shared<MatrixStack>();
+	temp->rotate(camRot, vec3(0, 1, 0));
+	sorter.C = temp->topMatrix(); 
+	sort(particles.begin(), particles.end(), sorter);
 }
 
 /* The render loop - this function is called repeatedly during the OGL program run */
@@ -184,8 +335,6 @@ static void render()
 	// Clear framebuffer.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	/* Leave this code to just draw the meshes alone */
-	//Use the matrix stack for Lab 6
    	float aspect = width/(float)height;
 
    	// Create the matrix stacks - please leave these alone for now
@@ -217,42 +366,42 @@ static void render()
 		M->scale(vec3(6, 6, 6));
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(-6, 0, -10));
+			M->translate(vec3(-6, 0, -7));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(-3, 0, -13));
+			M->translate(vec3(-3, 0, -10));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(0, 0, -15));
+			M->translate(vec3(0, 0, -12));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(3, 0, -10));
+			M->translate(vec3(3, 0, -17));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(5, 0, -13));
+			M->translate(vec3(5, 0, -10));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(9, 0, -13));
+			M->translate(vec3(9, 0, -10));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
@@ -260,42 +409,42 @@ static void render()
 
 		//////////////////////////////////////
 		M->pushMatrix();	// Left
-			M->translate(vec3(-10, 0, -6));
+			M->translate(vec3(-7, 0, -6));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Left
-			M->translate(vec3(-13, 0, -3));
+			M->translate(vec3(-10, 0, -3));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Left
-			M->translate(vec3(-15, 0, 0));
+			M->translate(vec3(-12, 0, 0));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Left
-			M->translate(vec3(-10, 0, 3));
+			M->translate(vec3(-7, 0, 3));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Left
-			M->translate(vec3(-13, 0, 5));
+			M->translate(vec3(-10, 0, 5));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();	
 
 		M->pushMatrix();	// Left
-			M->translate(vec3(-13, 0, 9));
+			M->translate(vec3(-10, 0, 9));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
@@ -303,84 +452,84 @@ static void render()
 
 		//////////////////////////////////////
 		M->pushMatrix();	// Right
-			M->translate(vec3(10, 0, -6));
+			M->translate(vec3(7, 0, -6));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Right
-			M->translate(vec3(13, 0, -3));
+			M->translate(vec3(10, 0, -3));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Right
-			M->translate(vec3(15, 0, 0));
+			M->translate(vec3(12, 0, 0));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Right
-			M->translate(vec3(10, 0, 3));
+			M->translate(vec3(7, 0, 3));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Right
-			M->translate(vec3(13, 0, 5));
+			M->translate(vec3(10, 0, 5));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(13, 0, 9));
+			M->translate(vec3(10, 0, 9));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 		//////////////////////////////////////
 		M->pushMatrix();	// Back
-			M->translate(vec3(-6, 0, 10));
+			M->translate(vec3(-6, 0, 7));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Back
-			M->translate(vec3(-3, 0, 13));
+			M->translate(vec3(-3, 0, 10));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Back
-			M->translate(vec3(0, 0, 15));
+			M->translate(vec3(0, 0, 12));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Back
-			M->translate(vec3(3, 0, 10));
+			M->translate(vec3(3, 0, 7));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Back
-			M->translate(vec3(5, 0, 13));
+			M->translate(vec3(5, 0, 10));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
 		M->popMatrix();
 
 		M->pushMatrix();	// Front
-			M->translate(vec3(9, 0, 13));
+			M->translate(vec3(9, 0, 10));
 			SetMaterial(4);
   			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
   			tree->draw(prog);
@@ -480,16 +629,209 @@ static void render()
 	  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()) );
 	  	  	shape->draw(prog);
    		M->popMatrix();
+
+   		/* Secondary Skater Attached */
+   		if (close == TRUE) {
+	   		M->pushMatrix();
+	   			M->translate(vec3(-3, 0, 0));
+	  			/* Left Eye */
+				M->pushMatrix();
+					M->rotate(radians(faceTheta), vec3(0, 1, 0));
+					M->translate(vec3(-.2, .3, .85));
+					M->scale(vec3(.1, .1, .1));
+				  	SetMaterial(1);
+			  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+			  	  	shape->draw(prog);
+				M->popMatrix();
+
+				/* Right Eye */
+				M->pushMatrix();
+					M->rotate(radians(faceTheta), vec3(0, 1, 0));
+					M->translate(vec3(.2, .3, .85));
+					M->scale(vec3(.1, .1, .1));
+				  	SetMaterial(1);
+			  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+			  	  	shape->draw(prog);
+				M->popMatrix();
+
+				/* Nose */
+				M->pushMatrix();
+					M->rotate(radians(faceTheta), vec3(0, 1, 0));
+					M->translate(vec3(0, .1, .5));
+					M->scale(vec3(.1, .1, .75));
+				  	SetMaterial(2);
+			  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+			  	  	shape->draw(prog);
+				M->popMatrix();
+
+				/* Right Wing */
+				M->pushMatrix();
+					M->translate(vec3(-.9, .2, 0));
+					M->rotate(rWingx, vec3(1, 0, 0));
+					M->rotate(rWingy, vec3(0, 1, 0));
+					M->rotate(rWing, vec3(0, 0, 1));
+					M->translate(vec3(0, -.7, 0));
+					M->scale(vec3(.18, .9, .5));
+				  	SetMaterial(1);
+			  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+			  	  	shape->draw(prog);
+				M->popMatrix();
+
+				/* Left Wing */
+				M->pushMatrix();
+					M->translate(vec3(.9, .2, 0));
+					M->rotate(lWingx, vec3(1, 0, 0));
+					M->rotate(lWingy, vec3(0, 1, 0));
+					M->rotate(lWing, vec3(0, 0, 1));
+					M->translate(vec3(0, -.7, 0));
+					M->scale(vec3(.18, .9, .5));
+				  	SetMaterial(1);
+			  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+			  	  	shape->draw(prog);
+				M->popMatrix();
+
+				/* Right Foot */
+				M->pushMatrix();
+					M->rotate(-rfTheta, vec3(1, 0, 0));
+					M->rotate(-.15, vec3(0, .8, 0));
+					M->translate(vec3(-.35, -1.4, .0));
+					M->scale(vec3(.25, .10, .49));
+				  	SetMaterial(2);
+			  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+			  	  	cube->draw(prog);
+				M->popMatrix();
+
+				/* Left Foot */
+				M->pushMatrix();
+					M->rotate(-lfTheta, vec3(1, 0, 0));
+					M->rotate(.15, vec3(0, 1, 0));
+					M->translate(vec3(.35, -1.4, .0));
+					M->scale(vec3(.25, .10, .49));
+				  	SetMaterial(2);
+			  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+			  	  	cube->draw(prog);
+				M->popMatrix();
+
+				/* Body */
+			  	M->scale(vec3(1, 1.4, 1));
+			  	SetMaterial(1);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()) );
+		  	  	shape->draw(prog);
+	   		M->popMatrix();
+   		}
    	M->popMatrix();
+
+   	/* Draw Secondary Skater Detached */
+   	/*float dist = distance(vec2(xMove, zMove), vec2(s2ix, s2iz));*/
+   	if (distance(vec2(xMove, zMove), vec2(s2ix, s2iz)) > 3.0 && close == FALSE) {
+   		close = FALSE;
+   		M->pushMatrix();
+   			M->translate(vec3(s2ix, 0, s2iz));
+   			M->scale(vec3(xExpand, yExpand, 1));	// Set Breathing
+  			/* Left Eye */
+			M->pushMatrix();
+				M->rotate(radians(faceTheta), vec3(0, 1, 0));
+				M->translate(vec3(-.2, .3, .85));
+				M->scale(vec3(.1, .1, .1));
+			  	SetMaterial(1);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+		  	  	shape->draw(prog);
+			M->popMatrix();
+
+			/* Right Eye */
+			M->pushMatrix();
+				M->rotate(radians(faceTheta), vec3(0, 1, 0));
+				M->translate(vec3(.2, .3, .85));
+				M->scale(vec3(.1, .1, .1));
+			  	SetMaterial(1);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+		  	  	shape->draw(prog);
+			M->popMatrix();
+
+			/* Nose */
+			M->pushMatrix();
+				M->rotate(radians(faceTheta), vec3(0, 1, 0));
+				M->translate(vec3(0, .1, .5));
+				M->scale(vec3(.1, .1, .75));
+			  	SetMaterial(2);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+		  	  	shape->draw(prog);
+			M->popMatrix();
+
+			/* Right Wing */
+			M->pushMatrix();
+				M->translate(vec3(-.9, .2, 0));
+				M->rotate(-.1, vec3(0, 0, 1));
+				M->translate(vec3(0, -.7, 0));
+				M->scale(vec3(.18, .9, .5));
+			  	SetMaterial(1);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+		  	  	shape->draw(prog);
+			M->popMatrix();
+
+			/* Left Wing */
+			M->pushMatrix();
+				M->translate(vec3(.9, .2, 0));
+				M->rotate(.1, vec3(0, 0, 1));
+				M->translate(vec3(0, -.7, 0));
+				M->scale(vec3(.18, .9, .5));
+			  	SetMaterial(1);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+		  	  	shape->draw(prog);
+			M->popMatrix();
+
+			/* Right Foot */
+			M->pushMatrix();
+				M->rotate(0, vec3(1, 0, 0));
+				M->rotate(-.15, vec3(0, .8, 0));
+				M->translate(vec3(-.35, -1.4, .0));
+				M->scale(vec3(.25, .10, .49));
+			  	SetMaterial(2);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+		  	  	cube->draw(prog);
+			M->popMatrix();
+
+			/* Left Foot */
+			M->pushMatrix();
+				M->rotate(0, vec3(1, 0, 0));
+				M->rotate(.15, vec3(0, 1, 0));
+				M->translate(vec3(.35, -1.4, .0));
+				M->scale(vec3(.25, .10, .49));
+			  	SetMaterial(2);
+		  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()));
+		  	  	cube->draw(prog);
+			M->popMatrix();
+
+			/* Body */
+		  	M->scale(vec3(1, 1.4, 1));
+		  	SetMaterial(1);
+	  	  	glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()) );
+	  	  	shape->draw(prog);
+   		M->popMatrix();
+   	}
+   	else {
+   		close = TRUE;
+   	}
+
+   	/* Draw Snowball */
+   	if (snowToss == TRUE) {
+   		M->pushMatrix();
+			M->translate(vec3(0, snowThrow, -5));
+			M->scale(vec3(.07, .07, .07));
+			SetMaterial(5);
+			glUniformMatrix4fv(prog->getUniform("M"), 1, GL_FALSE,value_ptr(M->topMatrix()) );
+	  	  	shape->draw(prog);
+		M->popMatrix();
+   	}
 
 	//////////////////////////////////////
 	///////////// TEXUTRES //////////////
-	/////////////////////////////////////
-	//draw the ground	
+	/////////////////////////////////////	
 	prog0->bind();
    	texture0->bind(prog0->getUniform("Texture0"));
 	glUniformMatrix4fv(prog0->getUniform("P2"), 1, GL_FALSE, value_ptr(P->topMatrix()));
 
+	//draw the ground
 	M->pushMatrix();
 		M->loadIdentity();	
 		M->pushMatrix();
@@ -497,10 +839,42 @@ static void render()
 			M->scale(vec3(500, .2, 500));
 			glUniformMatrix4fv(prog0->getUniform("M"), 1, GL_FALSE, value_ptr(M->topMatrix()));
 			glUniformMatrix4fv(prog0->getUniform("V"), 1, GL_FALSE, value_ptr(V->topMatrix()));
-		   	dog->draw(prog0);
+		   	cube2->draw(prog0);
 		M->popMatrix();
 	M->popMatrix();
+
 	prog0->unbind();
+
+	// Draw snow
+	if (snowFall == TRUE) {
+		prog_s->bind();
+		updateParticles();
+		updateGeom();
+		glUniformMatrix4fv(prog_s->getUniform("P"), 1, GL_FALSE, value_ptr(P->topMatrix()));
+
+		glUniformMatrix4fv(prog_s->getUniform("M"), 1, GL_FALSE, value_ptr(M->topMatrix()));
+
+		glUniformMatrix4fv(prog_s->getUniform("V"), 1, GL_FALSE, value_ptr(V->topMatrix()));
+	  
+	   	glEnableVertexAttribArray(0);
+	   	glBindBuffer(GL_ARRAY_BUFFER, pointsbuffer);
+	   	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0,(void*)0);
+	   
+		glEnableVertexAttribArray(1);
+	   	glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+	   	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0,(void*)0);
+	   
+		glVertexAttribDivisor(0, 1);
+		glVertexAttribDivisor(1, 1);
+	   	// Draw the points !
+		glDrawArraysInstanced(GL_POINTS, 0, 1, numP);
+
+		glVertexAttribDivisor(0, 0);
+		glVertexAttribDivisor(1, 0);
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		prog_s->unbind();
+	}
 
 	// Breathe 
 	if (xExpand < 1.04 && deflate == FALSE) {
@@ -765,6 +1139,10 @@ static void render()
 
 		// 12. Take center
 		else if (introCount == 11) {
+			snowToss = TRUE;
+			if (snowToss == TRUE){
+				snowThrow += .05;
+			}
 			if (xMove > 0) xMove -= .1;
 			if (zMove < -15) zMove += .06;
 
@@ -783,6 +1161,8 @@ static void render()
 				rfTheta = 0;
 
 				pHeight = 0;
+
+				snowToss = FALSE;
 				restrict = FALSE;
 			}
 
@@ -793,6 +1173,7 @@ static void render()
 				lWingx -= .3;
 			}
 			if (rWingx <= -3 && lWingx <= -3) {
+				snowFall = TRUE;
 				if (rWing > -3) rWing -= .01;	// Lower arms
 				if (lWing < 3) lWing += .01;
 			}
@@ -828,14 +1209,13 @@ static void error_callback(int error, const char *description)
 /* key callback */
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-	/*float speed = .1;*/
+	keyToggles[key] = !keyToggles[key];
 	float speed = .25;
 
 	if (restrict) {
-		if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+		if(key == GLFW_KEY_LEFT_BRACKET) {
 			restrict = FALSE;
 		}
-
 		else if(key == GLFW_KEY_ESCAPE && action == GLFW_REPEAT) {
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
@@ -845,9 +1225,29 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 
+		else if(key == GLFW_KEY_RIGHT_BRACKET) {
+			restrict = TRUE;
+		}
+
+		// COllision detection
+		/*if (action == GLFW_PRESS) {
+			float distance;
+
+			for (int i = 0; i < 24; i++) {
+				distance = sqrt(pow(xMove - treePos[2 * i + 0], 2) + pow(zMove - treePos[2 * i + 1], 2));
+				if (distance < 3) {
+					collision = TRUE;
+				}
+			}
+
+			if (collision)
+
+			
+		}*/
+
 		/* Move Right */
 		else if (key == GLFW_KEY_A) {
-			xMove -= .2;
+			xMove -= .3;
 			faceTheta = 0;
 
 			/* Rotate penguin slight left */
@@ -879,7 +1279,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 		/* Move Left */
 		else if (key == GLFW_KEY_D) {
-			xMove += .2;
+			xMove += .3;
 			faceTheta = 0;
 
 			/* Rotate penguin slight right*/
@@ -1027,9 +1427,11 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 		}
 		else if (key == GLFW_KEY_LEFT) {	// left
 			eye -= normalize(cross(LA, up)) * speed;
+			camRot -= .314f;
 		}
 		else if (key == GLFW_KEY_RIGHT) {	// right
 			eye += normalize(cross(LA, up)) * speed;
+			camRot += .314f;
 		}
 		/*} else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 			gMat = (gMat+1)%4;
@@ -1082,13 +1484,14 @@ static void resize_callback(GLFWwindow *window, int width, int height) {
 void SetMaterial(int i) {
   	switch (i) {
 	    case 0: // shiny blue plastic
-	 		glUniform3f(prog->getUniform("MatAmb"), 0.02, 0.04, 0.2);
+	 		// glUniform3f(prog->getUniform("MatAmb"), 0.02, 0.04, 0.2);
+	    	glUniform3f(prog->getUniform("MatAmb"), 0.04, 0.06, 0.4);
 	 		glUniform3f(prog->getUniform("MatDif"), 0.0, 0.16, 0.9);
 	 		glUniform3f(prog->getUniform("MatSpec"), 0.14, 0.2, 0.8); 
 	 		glUniform1f(prog->getUniform("shine"), 120.0);
 	      	break;
 	    case 1: // flat grey
-	 		glUniform3f(prog->getUniform("MatAmb"), 0.13, 0.13, 0.14);
+	 		glUniform3f(prog->getUniform("MatAmb"), 0.23, 0.23, 0.24);
 	 		glUniform3f(prog->getUniform("MatDif"), 0.3, 0.3, 0.4);
 	 		glUniform3f(prog->getUniform("MatSpec"), 0.3, 0.3, 0.4); 
 	 		glUniform1f(prog->getUniform("shine"), 4.0);
@@ -1109,6 +1512,12 @@ void SetMaterial(int i) {
 	 		glUniform3f(prog->getUniform("MatAmb"), 0.02, 0.04, 0.2);
 	 		glUniform3f(prog->getUniform("MatDif"), 0.0, 0.9, 0.16);
 	 		glUniform3f(prog->getUniform("MatSpec"), 0.14, 0.2, 0.8); 
+	 		glUniform1f(prog->getUniform("shine"), 120.0);
+	 		break;
+	 	case 5: // white
+	 		glUniform3f(prog->getUniform("MatAmb"), .8, .8, .8);
+	 		glUniform3f(prog->getUniform("MatDif"), 1.0, 1.0, 1.0);
+	 		glUniform3f(prog->getUniform("MatSpec"), 1.0, 1.0, 1.0); 
 	 		glUniform1f(prog->getUniform("shine"), 120.0);
 	 		break;
 	}
@@ -1171,7 +1580,6 @@ int main(int argc, char **argv)
 	while(!glfwWindowShouldClose(window)) {
 		// Render scene.
 		render();
-
 		// Swap front and back buffers.
 		glfwSwapBuffers(window);
 		// Poll for and process events.

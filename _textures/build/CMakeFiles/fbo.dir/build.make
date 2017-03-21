@@ -129,9 +129,33 @@ CMakeFiles/fbo.dir/src/MatrixStack.cpp.o.provides: CMakeFiles/fbo.dir/src/Matrix
 CMakeFiles/fbo.dir/src/MatrixStack.cpp.o.provides.build: CMakeFiles/fbo.dir/src/MatrixStack.cpp.o
 
 
+CMakeFiles/fbo.dir/src/Particle.cpp.o: CMakeFiles/fbo.dir/flags.make
+CMakeFiles/fbo.dir/src/Particle.cpp.o: ../src/Particle.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/fbo.dir/src/Particle.cpp.o"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/fbo.dir/src/Particle.cpp.o -c /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/src/Particle.cpp
+
+CMakeFiles/fbo.dir/src/Particle.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/fbo.dir/src/Particle.cpp.i"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/src/Particle.cpp > CMakeFiles/fbo.dir/src/Particle.cpp.i
+
+CMakeFiles/fbo.dir/src/Particle.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fbo.dir/src/Particle.cpp.s"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/src/Particle.cpp -o CMakeFiles/fbo.dir/src/Particle.cpp.s
+
+CMakeFiles/fbo.dir/src/Particle.cpp.o.requires:
+
+.PHONY : CMakeFiles/fbo.dir/src/Particle.cpp.o.requires
+
+CMakeFiles/fbo.dir/src/Particle.cpp.o.provides: CMakeFiles/fbo.dir/src/Particle.cpp.o.requires
+	$(MAKE) -f CMakeFiles/fbo.dir/build.make CMakeFiles/fbo.dir/src/Particle.cpp.o.provides.build
+.PHONY : CMakeFiles/fbo.dir/src/Particle.cpp.o.provides
+
+CMakeFiles/fbo.dir/src/Particle.cpp.o.provides.build: CMakeFiles/fbo.dir/src/Particle.cpp.o
+
+
 CMakeFiles/fbo.dir/src/Program.cpp.o: CMakeFiles/fbo.dir/flags.make
 CMakeFiles/fbo.dir/src/Program.cpp.o: ../src/Program.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/fbo.dir/src/Program.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/fbo.dir/src/Program.cpp.o"
 	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/fbo.dir/src/Program.cpp.o -c /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/src/Program.cpp
 
 CMakeFiles/fbo.dir/src/Program.cpp.i: cmake_force
@@ -155,7 +179,7 @@ CMakeFiles/fbo.dir/src/Program.cpp.o.provides.build: CMakeFiles/fbo.dir/src/Prog
 
 CMakeFiles/fbo.dir/src/Shape.cpp.o: CMakeFiles/fbo.dir/flags.make
 CMakeFiles/fbo.dir/src/Shape.cpp.o: ../src/Shape.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/fbo.dir/src/Shape.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/fbo.dir/src/Shape.cpp.o"
 	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/fbo.dir/src/Shape.cpp.o -c /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/src/Shape.cpp
 
 CMakeFiles/fbo.dir/src/Shape.cpp.i: cmake_force
@@ -179,7 +203,7 @@ CMakeFiles/fbo.dir/src/Shape.cpp.o.provides.build: CMakeFiles/fbo.dir/src/Shape.
 
 CMakeFiles/fbo.dir/src/Texture.cpp.o: CMakeFiles/fbo.dir/flags.make
 CMakeFiles/fbo.dir/src/Texture.cpp.o: ../src/Texture.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/fbo.dir/src/Texture.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/fbo.dir/src/Texture.cpp.o"
 	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/fbo.dir/src/Texture.cpp.o -c /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/src/Texture.cpp
 
 CMakeFiles/fbo.dir/src/Texture.cpp.i: cmake_force
@@ -203,7 +227,7 @@ CMakeFiles/fbo.dir/src/Texture.cpp.o.provides.build: CMakeFiles/fbo.dir/src/Text
 
 CMakeFiles/fbo.dir/src/main.cpp.o: CMakeFiles/fbo.dir/flags.make
 CMakeFiles/fbo.dir/src/main.cpp.o: ../src/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/fbo.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/fbo.dir/src/main.cpp.o"
 	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/fbo.dir/src/main.cpp.o -c /Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/src/main.cpp
 
 CMakeFiles/fbo.dir/src/main.cpp.i: cmake_force
@@ -230,6 +254,7 @@ fbo_OBJECTS = \
 "CMakeFiles/fbo.dir/src/GLSL.cpp.o" \
 "CMakeFiles/fbo.dir/src/GLTextureWriter.cpp.o" \
 "CMakeFiles/fbo.dir/src/MatrixStack.cpp.o" \
+"CMakeFiles/fbo.dir/src/Particle.cpp.o" \
 "CMakeFiles/fbo.dir/src/Program.cpp.o" \
 "CMakeFiles/fbo.dir/src/Shape.cpp.o" \
 "CMakeFiles/fbo.dir/src/Texture.cpp.o" \
@@ -241,6 +266,7 @@ fbo_EXTERNAL_OBJECTS =
 fbo: CMakeFiles/fbo.dir/src/GLSL.cpp.o
 fbo: CMakeFiles/fbo.dir/src/GLTextureWriter.cpp.o
 fbo: CMakeFiles/fbo.dir/src/MatrixStack.cpp.o
+fbo: CMakeFiles/fbo.dir/src/Particle.cpp.o
 fbo: CMakeFiles/fbo.dir/src/Program.cpp.o
 fbo: CMakeFiles/fbo.dir/src/Shape.cpp.o
 fbo: CMakeFiles/fbo.dir/src/Texture.cpp.o
@@ -249,7 +275,7 @@ fbo: CMakeFiles/fbo.dir/build.make
 fbo: /Users/kalealouie/Desktop/cpe471/glfw-3.2.1/debug/src/libglfw3.a
 fbo: /Users/kalealouie/Desktop/cpe471/glew-2.0.0/lib/libGLEW.a
 fbo: CMakeFiles/fbo.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable fbo"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/kalealouie/Desktop/cpe471/projects/final/IceSkatingPenguin/_textures/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable fbo"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/fbo.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -260,6 +286,7 @@ CMakeFiles/fbo.dir/build: fbo
 CMakeFiles/fbo.dir/requires: CMakeFiles/fbo.dir/src/GLSL.cpp.o.requires
 CMakeFiles/fbo.dir/requires: CMakeFiles/fbo.dir/src/GLTextureWriter.cpp.o.requires
 CMakeFiles/fbo.dir/requires: CMakeFiles/fbo.dir/src/MatrixStack.cpp.o.requires
+CMakeFiles/fbo.dir/requires: CMakeFiles/fbo.dir/src/Particle.cpp.o.requires
 CMakeFiles/fbo.dir/requires: CMakeFiles/fbo.dir/src/Program.cpp.o.requires
 CMakeFiles/fbo.dir/requires: CMakeFiles/fbo.dir/src/Shape.cpp.o.requires
 CMakeFiles/fbo.dir/requires: CMakeFiles/fbo.dir/src/Texture.cpp.o.requires

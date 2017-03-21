@@ -2,6 +2,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/fbo.dir/src/GLSL.cpp.o"
   "CMakeFiles/fbo.dir/src/GLTextureWriter.cpp.o"
   "CMakeFiles/fbo.dir/src/MatrixStack.cpp.o"
+  "CMakeFiles/fbo.dir/src/Particle.cpp.o"
   "CMakeFiles/fbo.dir/src/Program.cpp.o"
   "CMakeFiles/fbo.dir/src/Shape.cpp.o"
   "CMakeFiles/fbo.dir/src/Texture.cpp.o"

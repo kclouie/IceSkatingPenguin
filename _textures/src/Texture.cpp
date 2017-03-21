@@ -74,6 +74,13 @@ void Texture::bind(GLint handle)
 	glUniform1i(handle, unit);
 }
 
+void Texture::bind()
+{
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_2D, tid);
+	glUniform1i(handle, unit);
+}
+
 void Texture::unbind()
 {
 	glActiveTexture(GL_TEXTURE0 + unit);
