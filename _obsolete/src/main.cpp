@@ -1,5 +1,5 @@
 /* 
-Final Project - Lab 8? base
+Final Project - Lab 8? base - _OBSOLETE
 
 Winter 2017 - ZJW (Piddington texture write)
 Look for "TODO" in this file and write new shaders
